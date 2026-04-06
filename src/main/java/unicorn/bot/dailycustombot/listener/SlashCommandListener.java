@@ -13,6 +13,8 @@ import unicorn.bot.dailycustombot.command.DailyViewCommand;
 import unicorn.bot.dailycustombot.command.TicketSetupCommand;
 import unicorn.bot.dailycustombot.command.TicketAddTypeCommand;
 import unicorn.bot.dailycustombot.command.TicketRemoveTypeCommand;
+import unicorn.bot.dailycustombot.command.GuessPostCommand;
+import unicorn.bot.dailycustombot.command.GuessResultCommand;
 
 /**
  * Listener nhận mọi Slash Command interaction và route đến handler tương ứng.
@@ -30,6 +32,8 @@ public class SlashCommandListener extends ListenerAdapter {
     private final TicketSetupCommand ticketSetupCommand = new TicketSetupCommand();
     private final TicketAddTypeCommand ticketAddTypeCommand = new TicketAddTypeCommand();
     private final TicketRemoveTypeCommand ticketRemoveTypeCommand = new TicketRemoveTypeCommand();
+    private final GuessPostCommand guessPostCommand = new GuessPostCommand();
+    private final GuessResultCommand guessResultCommand = new GuessResultCommand();
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
@@ -49,6 +53,8 @@ public class SlashCommandListener extends ListenerAdapter {
             case "ticket_setup" -> ticketSetupCommand.handle(event);
             case "ticket_add_type" -> ticketAddTypeCommand.handle(event);
             case "ticket_remove_type" -> ticketRemoveTypeCommand.handle(event);
+            case "guess_post" -> guessPostCommand.handle(event);
+            case "guess_result" -> guessResultCommand.handle(event);
             default -> {
                 logger.warn("Unknown command: /{}", commandName);
                 event.reply("Unknown command!").setEphemeral(true).queue();

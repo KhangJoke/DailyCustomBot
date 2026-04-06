@@ -162,6 +162,24 @@ public class DatabaseManager {
                 ON CONFLICT (type_id) DO NOTHING;
                 """;
 
+        String createMinigameSessions = """
+                CREATE TABLE IF NOT EXISTS minigame_sessions (
+                    message_id VARCHAR(50) PRIMARY KEY,
+                    video_url TEXT NOT NULL,
+                    actual_rank VARCHAR(50) NOT NULL,
+                    status VARCHAR(20) DEFAULT 'OPEN'
+                );
+                """;
+
+        String createMinigameGuesses = """
+                CREATE TABLE IF NOT EXISTS minigame_guesses (
+                    message_id VARCHAR(50),
+                    user_id VARCHAR(50),
+                    guessed_rank VARCHAR(50),
+                    PRIMARY KEY (message_id, user_id)
+                );
+                """;
+
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute(createGameConfigs);
@@ -169,6 +187,8 @@ public class DatabaseManager {
             stmt.execute(createTicketTypes);
             stmt.execute(insertDefaultTicketConfig);
             stmt.execute(insertDefaultTicketTypes);
+            stmt.execute(createMinigameSessions);
+            stmt.execute(createMinigameGuesses);
             logger.info("Database tables initialized successfully.");
         } catch (SQLException e) {
             logger.error("Failed to initialize database tables: {}", e.getMessage(), e);

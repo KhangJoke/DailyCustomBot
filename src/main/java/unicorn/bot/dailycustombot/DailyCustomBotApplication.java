@@ -5,6 +5,8 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +17,7 @@ import unicorn.bot.dailycustombot.listener.SlashCommandListener;
 import unicorn.bot.dailycustombot.listener.TicketButtonListener;
 import unicorn.bot.dailycustombot.listener.TicketModalListener;
 import unicorn.bot.dailycustombot.listener.TicketSelectMenuListener;
+import unicorn.bot.dailycustombot.listener.GuessReactionListener;
 import unicorn.bot.dailycustombot.scheduler.DailyScheduler;
 
 import java.io.IOException;
@@ -71,7 +74,8 @@ public class DailyCustomBotApplication {
                             new SlashCommandListener(),
                             new TicketButtonListener(),
                             new TicketSelectMenuListener(),
-                            new TicketModalListener()
+                            new TicketModalListener(),
+                            new GuessReactionListener()
                     )
                     .build();
 
@@ -216,6 +220,33 @@ public class DailyCustomBotApplication {
                 Commands.slash("ticket_remove_type", "Xóa một loại ticket")
                         .addOptions(
                                 new OptionData(OptionType.STRING, "id", "ID loại ticket cần xóa", true)
+                        ),
+
+                // ===== MINIGAME CHỌN RANK =====
+
+                // /guess_post - Đăng game
+                Commands.slash("guess_post", "Đăng mini game đoán Rank")
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
+                        .addOptions(
+                                new OptionData(OptionType.STRING, "video_url", "Link video clip", true),
+                                new OptionData(OptionType.STRING, "actual_rank", "Tên Rank ĐÚNG (VD: 1️⃣ Sắt, 🔟 Thách đấu...)", true)
+                                        .addChoice("1️⃣ Sắt (Iron)", "1️⃣")
+                                        .addChoice("2️⃣ Đồng (Bronze)", "2️⃣")
+                                        .addChoice("3️⃣ Bạc (Silver)", "3️⃣")
+                                        .addChoice("4️⃣ Vàng (Gold)", "4️⃣")
+                                        .addChoice("5️⃣ Bạch kim (Platinum)", "5️⃣")
+                                        .addChoice("6️⃣ Kim cương (Diamond)", "6️⃣")
+                                        .addChoice("7️⃣ Lục bảo / Đăng cấp (Emerald/Ascendant)", "7️⃣")
+                                        .addChoice("8️⃣ Cao thủ / Bất tử (Master/Immortal)", "8️⃣")
+                                        .addChoice("9️⃣ Đại CT / Thách đấu Val (GM/Radiant)", "9️⃣")
+                                        .addChoice("🔟 Thách đấu LOL (Challenger)", "🔟")
+                        ),
+
+                // /guess_result - Kết quả game
+                Commands.slash("guess_result", "Công bố kết quả mini game")
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
+                        .addOptions(
+                                new OptionData(OptionType.STRING, "message_id", "ID của bài đăng game", true)
                         )
         ).queue(
                 commands -> logger.info("Registered {} slash commands successfully!", commands.size()),
