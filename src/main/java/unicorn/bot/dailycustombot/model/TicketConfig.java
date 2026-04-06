@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Record chứa toàn bộ cấu hình hệ thống ticket.
- * Map trực tiếp với cấu trúc file ticket-config.json.
+ * Map trực tiếp với cấu trúc bảng ticket_config trong PostgreSQL.
  *
  * @param ticketCategoryId ID Category trên Discord để tạo channel ticket
  * @param staffRoleId      ID Role staff có quyền xem/xử lý tất cả ticket

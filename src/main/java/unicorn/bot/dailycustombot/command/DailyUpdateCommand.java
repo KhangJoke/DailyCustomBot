@@ -12,7 +12,7 @@ import java.util.Optional;
 
 /**
  * Handler cho lệnh /daily_update.
- * Cập nhật các trường embed trong config.json mà không đăng bài.
+ * Cập nhật các trường embed trong database mà không đăng bài.
  */
 public class DailyUpdateCommand {
 
