@@ -1,6 +1,5 @@
 package unicorn.bot.dailycustombot.listener;
 
-import net.dv8tion.jda.api.entities.MessageReaction;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
@@ -30,22 +29,21 @@ public class GuessReactionListener extends ListenerAdapter {
 
         String emojiDb = event.getEmoji().getName();
 
-        // Đảm bảo chỉ có 1 reaction trên UI Discord bằng cách duyệt và gỡ các reaction cũ
-        event.retrieveMessage().queue(msg -> {
-            for (MessageReaction reaction : msg.getReactions()) {
-                if (!reaction.getEmoji().getName().equals(emojiDb)) {
-                    // Nếu user có thả ở cái khác, bắt bot gỡ nó đi
-                    reaction.retrieveUsers().queue(users -> {
-                        if (users.contains(user)) {
-                            reaction.removeReaction(user).queue();
-                        }
-                    });
-                }
-            }
-        });
+        // Kiểm tra xem user có lựa chọn cũ nào trong DB không
+        String prevGuess = gameManager.getPreviousGuess(messageId, user.getId());
 
-        // Ghi/Đè vào Database (UPSERT)
+        // Ghi đè vào Database (Lưu ngay lập tức để chặn spam)
         gameManager.upsertGuess(messageId, user.getId(), emojiDb);
+
+        // Phát hiện đổi đáp án: Nếu có lựa chọn cũ khác với lựa chọn mới, gỡ UI của lựa chọn cũ
+        if (prevGuess != null && !prevGuess.equals(emojiDb)) {
+            event.retrieveMessage().queue(msg -> {
+                msg.getReactions().stream()
+                        .filter(r -> r.getEmoji().getName().equals(prevGuess))
+                        .findFirst()
+                        .ifPresent(oldReaction -> oldReaction.removeReaction(user).queue());
+            });
+        }
     }
 
     @Override

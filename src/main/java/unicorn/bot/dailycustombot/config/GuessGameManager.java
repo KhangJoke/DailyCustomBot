@@ -97,6 +97,24 @@ public class GuessGameManager {
     }
 
     /**
+     * Lấy lựa chọn trước đó của người chơi.
+     */
+    public String getPreviousGuess(String messageId, String userId) {
+        String sql = "SELECT guessed_rank FROM minigame_guesses WHERE message_id = ? AND user_id = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, messageId);
+            ps.setString(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString("guessed_rank");
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get previous guess: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
      * Upsert lựa chọn của người chơi.
      */
     public void upsertGuess(String messageId, String userId, String guessedRank) {
