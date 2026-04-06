@@ -14,7 +14,8 @@ import java.sql.Statement;
 import java.util.List;
 
 /**
- * Singleton quản lý kết nối PostgreSQL database thông qua HikariCP connection pool.
+ * Singleton quản lý kết nối PostgreSQL database thông qua HikariCP connection
+ * pool.
  * Tự động tạo tables khi khởi tạo.
  */
 public class DatabaseManager {
@@ -31,7 +32,8 @@ public class DatabaseManager {
         if (databaseUrl.startsWith("postgresql://") || databaseUrl.startsWith("postgres://")) {
             try {
                 java.net.URI uri = new java.net.URI(databaseUrl);
-                String jdbcUrl = "jdbc:postgresql://" + uri.getHost() + ":" + (uri.getPort() != -1 ? uri.getPort() : 5432) + uri.getPath();
+                String jdbcUrl = "jdbc:postgresql://" + uri.getHost() + ":"
+                        + (uri.getPort() != -1 ? uri.getPort() : 5432) + uri.getPath();
                 config.setJdbcUrl(jdbcUrl);
 
                 if (uri.getUserInfo() != null) {
@@ -50,9 +52,9 @@ public class DatabaseManager {
         }
         config.setMaximumPoolSize(5);
         config.setMinimumIdle(1);
-        config.setIdleTimeout(300_000);        // 5 minutes
-        config.setConnectionTimeout(10_000);   // 10 seconds
-        config.setMaxLifetime(600_000);        // 10 minutes
+        config.setIdleTimeout(300_000); // 5 minutes
+        config.setConnectionTimeout(10_000); // 10 seconds
+        config.setMaxLifetime(600_000); // 10 minutes
         config.setPoolName("BotDB-Pool");
 
         this.dataSource = new HikariDataSource(config);
@@ -184,7 +186,7 @@ public class DatabaseManager {
                 """;
 
         try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement()) {
+                Statement stmt = conn.createStatement()) {
             stmt.execute(createGameConfigs);
             stmt.execute(createTicketConfig);
             stmt.execute(createTicketTypes);
@@ -218,7 +220,8 @@ public class DatabaseManager {
                     List<String> lines = Files.readAllLines(envFile);
                     for (String line : lines) {
                         line = line.trim();
-                        if (line.startsWith("#") || line.isBlank()) continue;
+                        if (line.startsWith("#") || line.isBlank())
+                            continue;
                         if (line.startsWith("DATABASE_URL=")) {
                             String url = line.substring("DATABASE_URL=".length()).trim();
                             if (!url.isBlank()) {
