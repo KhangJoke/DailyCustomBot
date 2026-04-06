@@ -52,6 +52,10 @@ public class GuessResultCommand {
         String actualRankEmoji = optRank.get();
         List<String> correctGuessers = gameManager.getCorrectGuessers(messageId, actualRankEmoji);
 
+        // Lấy định dạng emoji chuẩn để in ra Embed
+        var emotes = event.getGuild().getEmojisByName(actualRankEmoji, true);
+        String formattedRank = emotes.isEmpty() ? "**" + actualRankEmoji + "**" : emotes.get(0).getAsMention();
+
         // Đóng game
         gameManager.updateStatus(messageId, "CLOSED");
 
@@ -64,7 +68,7 @@ public class GuessResultCommand {
 
         if (correctGuessers.isEmpty()) {
             String msg = "😔 **MINI GAME KẾT THÚC!**\n" +
-                    "Đáp án đúng là " + actualRankEmoji + " nhưng rất tiếc không có ai đoán đúng lần này!";
+                    "Đáp án đúng là " + formattedRank + " nhưng rất tiếc không có ai đoán đúng lần này!";
             event.reply(msg).queue();
             return;
         }
@@ -75,10 +79,10 @@ public class GuessResultCommand {
         EmbedBuilder embed = new EmbedBuilder()
                 .setTitle("🎉 KẾT QUẢ MINI GAME ĐOÁN RANK 🎉")
                 .setColor(Color.GREEN)
-                .setDescription("Đáp án chính xác là: **" + actualRankEmoji + "**\n\n" +
+                .setDescription("Đáp án chính xác là: " + formattedRank + "\n\n" +
                         "Chúc mừng <@" + winnerId + "> đã may mắn trúng thưởng!\n\n" +
                         "🎁 **Phần thưởng:** 10k (1 giờ chơi)\n" +
-                        "⏳ **Lưu ý:** Vui lòng tạo Ticket hoặc nhắn tin cho Admin báo Tên Tài Khoản trong vòng **3 ngày** để được nạp, nếu không phần thưởng sẽ bị hủy.")
+                        "⏳ **Lưu ý:** Vui lòng tạo Ticket hoặc nhắn tin để lại Tên Tài Khoản Game trong vòng **3 ngày** để được nạp, nếu không phần thưởng sẽ bị hủy.")
                 .setFooter("Cảm ơn tất cả mọi người đã tham gia!");
 
         // Trả lời công khai

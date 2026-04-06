@@ -31,13 +31,14 @@ public class GuessGameManager {
     /**
      * Tạo một session game mới.
      */
-    public boolean createSession(String messageId, String videoUrl, String actualRank) {
-        String sql = "INSERT INTO minigame_sessions (message_id, video_url, actual_rank, status) VALUES (?, ?, ?, 'OPEN')";
+    public boolean createSession(String messageId, String gameType, String videoUrl, String actualRank) {
+        String sql = "INSERT INTO minigame_sessions (message_id, game_type, video_url, actual_rank, status) VALUES (?, ?, ?, ?, 'OPEN')";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, messageId);
-            ps.setString(2, videoUrl);
-            ps.setString(3, actualRank);
+            ps.setString(2, gameType);
+            ps.setString(3, videoUrl);
+            ps.setString(4, actualRank);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             logger.error("Failed to create minigame session {}: {}", messageId, e.getMessage());

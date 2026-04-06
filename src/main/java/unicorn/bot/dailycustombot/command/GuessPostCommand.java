@@ -2,22 +2,22 @@ package unicorn.bot.dailycustombot.command;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import unicorn.bot.dailycustombot.config.GuessGameManager;
+import unicorn.bot.dailycustombot.listener.GuessAutoCompleteListener;
 
 import java.awt.Color;
+import java.util.List;
 
 /**
  * Lệnh /guess_post cho Admin đăng mini game.
  */
 public class GuessPostCommand {
 
-    public static final String[] RANK_EMOJIS = {
-            "1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3",
-            "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3", "9\uFE0F\u20E3", "\uD83D\uDD1F"
-    };
+    private static final Logger logger = LoggerFactory.getLogger(GuessPostCommand.class);
 
     public void handle(SlashCommandInteractionEvent event) {
         if (!event.getMember().hasPermission(Permission.ADMINISTRATOR)) {
@@ -25,52 +25,49 @@ public class GuessPostCommand {
             return;
         }
 
+        String game = event.getOption("game", OptionMapping::getAsString);
         String videoUrl = event.getOption("video_url", OptionMapping::getAsString);
         String actualRank = event.getOption("actual_rank", OptionMapping::getAsString);
 
-        if (videoUrl == null || actualRank == null) {
+        if (game == null || videoUrl == null || actualRank == null) {
             event.reply("❌ Thiếu tham số!").setEphemeral(true).queue();
             return;
         }
 
-        // Defer reply để bot có thời gian xử lý post
+        // Defer reply để bot có thời gian đọc và tải emoji
         event.deferReply(true).queue();
 
+        boolean isValorant = "VALORANT".equalsIgnoreCase(game);
+        List<String> ranksList = isValorant ? GuessAutoCompleteListener.VAL_RANKS : GuessAutoCompleteListener.LOL_RANKS;
+        String gameText = isValorant ? "VALORANT" : "LIÊN MINH HUYỀN THOẠI";
+
         EmbedBuilder embed = new EmbedBuilder()
-                .setTitle("🎮 MINI GAME: ĐOÁN RANK")
-                .setColor(Color.ORANGE)
+                .setTitle("🎮 MINI GAME: ĐOÁN RANK " + gameText)
+                .setColor(isValorant ? Color.RED : Color.CYAN)
                 .setDescription("Xem clip bên trên và đoán xem người chơi đang ở mức rank nào nhé!\n" +
                         "Phần thưởng: **10k (1 giờ chơi) cho 1 bạn may mắn đoán trúng!**\n\n" +
-                        "*Lưu ý: Bạn bè chỉ được chọn 1 biểu tượng duy nhất.*")
-                .addField("⭐ Danh sách Chọn",
-                        """
-                        1️⃣ Sắt (Iron)
-                        2️⃣ Đồng (Bronze)
-                        3️⃣ Bạc (Silver)
-                        4️⃣ Vàng (Gold)
-                        5️⃣ Bạch kim (Platinum)
-                        6️⃣ Kim cương (Diamond)
-                        7️⃣ Lục bảo / Đăng cấp (Emrd/Ascd)
-                        8️⃣ Cao thủ / Bất tử (Master/Immo)
-                        9️⃣ Đại Cao thủ / Thách đấu Val
-                        🔟 Thách đấu LOL (Challenger)
-                        """, false)
+                        "*Lưu ý: Hệ thống chỉ lưu một lựa chọn cuối cùng của bạn.*")
                 .setFooter("Admin sẽ chốt kết quả vào ngày mai!");
 
-        // Gửi Message vào channel hiện tại (Nội dung text là link để Discord tự bung video player)
+        // Gửi Message vào channel hiện tại
         event.getChannel().sendMessage(videoUrl)
                 .addEmbeds(embed.build())
                 .queue(message -> {
                     // Lưu vào DB
-                    GuessGameManager.getInstance().createSession(message.getId(), videoUrl, actualRank);
+                    GuessGameManager.getInstance().createSession(message.getId(), game.toUpperCase(), videoUrl, actualRank);
 
                     // Thả reaction
-                    for (String emojiUnicode : RANK_EMOJIS) {
-                        message.addReaction(Emoji.fromUnicode(emojiUnicode)).queue();
+                    for (String rankName : ranksList) {
+                        var emotes = message.getGuild().getEmojisByName(rankName, true);
+                        if (!emotes.isEmpty()) {
+                            message.addReaction(emotes.get(0)).queue();
+                        } else {
+                            logger.warn("Custom emoji not found on server: {}", rankName);
+                        }
                     }
 
                     // Trả lời admin
-                    event.getHook().sendMessage("✅ Đã tạo Mini Game thành công! Hãy kiểm tra kênh.")
+                    event.getHook().sendMessage("✅ Đã tạo Mini Game thành công! Hãy kiểm tra bài post.")
                             .queue();
                 });
     }
