@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import unicorn.bot.dailycustombot.config.ConfigManager;
+import unicorn.bot.dailycustombot.config.DatabaseManager;
 import unicorn.bot.dailycustombot.config.TicketConfigManager;
 import unicorn.bot.dailycustombot.listener.SlashCommandListener;
 import unicorn.bot.dailycustombot.listener.TicketButtonListener;
@@ -39,11 +40,22 @@ public class DailyCustomBotApplication {
             System.exit(1);
         }
 
-        // Khởi tạo ConfigManager (tạo config.json mặc định nếu chưa có)
+        // Khởi tạo Database
+        String databaseUrl = DatabaseManager.loadDatabaseUrl();
+        if (databaseUrl == null || databaseUrl.isBlank()) {
+            logger.error("DATABASE_URL not found!");
+            logger.error("   Option 1: Add DATABASE_URL=postgresql://... to .env file");
+            logger.error("   Option 2: Set environment variable DATABASE_URL");
+            System.exit(1);
+        }
+        DatabaseManager.init(databaseUrl);
+        logger.info("DatabaseManager initialized.");
+
+        // Khởi tạo ConfigManager
         ConfigManager.getInstance();
         logger.info("ConfigManager initialized.");
 
-        // Khởi tạo TicketConfigManager (tạo ticket-config.json mặc định nếu chưa có)
+        // Khởi tạo TicketConfigManager
         TicketConfigManager.getInstance();
         logger.info("TicketConfigManager initialized.");
 
@@ -76,6 +88,7 @@ public class DailyCustomBotApplication {
                 logger.info("Shutting down bot...");
                 scheduler.shutdown();
                 jda.shutdown();
+                DatabaseManager.getInstance().shutdown();
                 logger.info("Bot shutdown complete.");
             }));
 

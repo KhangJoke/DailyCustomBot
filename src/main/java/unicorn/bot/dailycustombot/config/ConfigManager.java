@@ -1,36 +1,28 @@
 package unicorn.bot.dailycustombot.config;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import unicorn.bot.dailycustombot.model.BotConfig;
 import unicorn.bot.dailycustombot.model.EmbedData;
 import unicorn.bot.dailycustombot.model.GameConfig;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Singleton quản lý đọc/ghi file config.json.
+ * Singleton quản lý cấu hình game từ PostgreSQL database.
  * Thread-safe thông qua synchronized methods.
+ * API public giữ nguyên so với phiên bản file để không ảnh hưởng commands.
  */
 public class ConfigManager {
 
     private static final Logger logger = LoggerFactory.getLogger(ConfigManager.class);
-    private static final Path CONFIG_PATH = Path.of("config.json");
     private static ConfigManager instance;
 
-    private final Gson gson;
-    private BotConfig botConfig;
-
     private ConfigManager() {
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
-        loadConfig();
+        // Không cần init gì — DatabaseManager đã tạo tables
     }
 
     public static synchronized ConfigManager getInstance() {
@@ -41,82 +33,159 @@ public class ConfigManager {
     }
 
     /**
-     * Đọc config từ file JSON. Nếu file chưa tồn tại, tạo file mặc định.
-     */
-    public synchronized void loadConfig() {
-        try {
-            if (!Files.exists(CONFIG_PATH)) {
-                logger.info("config.json not found, creating default config...");
-                botConfig = createDefaultConfig();
-                saveConfig();
-                return;
-            }
-
-            String json = Files.readString(CONFIG_PATH);
-            botConfig = gson.fromJson(json, BotConfig.class);
-            logger.debug("Loaded config.json with {} game(s).", botConfig.games().size());
-        } catch (IOException e) {
-            logger.error("Failed to read config.json: {}", e.getMessage(), e);
-            botConfig = createDefaultConfig();
-        }
-    }
-
-    /**
-     * Ghi config hiện tại ra file JSON.
-     */
-    public synchronized void saveConfig() {
-        try {
-            String json = gson.toJson(botConfig);
-            Files.writeString(CONFIG_PATH, json);
-            logger.debug("config.json saved successfully.");
-        } catch (IOException e) {
-            logger.error("Failed to write config.json: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
      * Lấy config của một game theo tên (case-insensitive).
      */
     public synchronized Optional<GameConfig> getGameConfig(String gameName) {
-        return botConfig.games().stream()
-                .filter(g -> g.gameName().equalsIgnoreCase(gameName))
-                .findFirst();
+        String sql = "SELECT * FROM game_configs WHERE LOWER(game_name) = LOWER(?)";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, gameName);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapResultSetToGameConfig(rs));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get game config for '{}': {}", gameName, e.getMessage(), e);
+        }
+        return Optional.empty();
     }
 
     /**
      * Lấy danh sách tên tất cả các game đã cấu hình.
      */
     public synchronized List<String> getGameNames() {
-        return botConfig.games().stream()
-                .map(GameConfig::gameName)
-                .toList();
+        List<String> names = new ArrayList<>();
+        String sql = "SELECT game_name FROM game_configs ORDER BY game_name";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                names.add(rs.getString("game_name"));
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get game names: {}", e.getMessage(), e);
+        }
+        return names;
+    }
+
+    /**
+     * Lấy toàn bộ BotConfig.
+     */
+    public synchronized BotConfig getBotConfig() {
+        List<GameConfig> games = new ArrayList<>();
+        String sql = "SELECT * FROM game_configs ORDER BY game_name";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                games.add(mapResultSetToGameConfig(rs));
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get bot config: {}", e.getMessage(), e);
+        }
+        return new BotConfig(games);
     }
 
     /**
      * Cập nhật config của một game. Nếu game chưa tồn tại, không làm gì.
      */
-    public synchronized void updateGameConfig(GameConfig updatedGame) {
-        List<GameConfig> updatedList = new ArrayList<>();
-        for (GameConfig game : botConfig.games()) {
-            if (game.gameName().equalsIgnoreCase(updatedGame.gameName())) {
-                updatedList.add(updatedGame);
-            } else {
-                updatedList.add(game);
-            }
+    public synchronized void updateGameConfig(GameConfig g) {
+        String sql = """
+                UPDATE game_configs SET
+                    channel_id = ?, role_id = ?, auto_post = ?, post_time = ?,
+                    champion_prize = ?, kill_prize = ?, format_description = ?,
+                    gun = ?, map = ?, agent = ?,
+                    register_deadline = ?, match_time = ?, rank_limit = ?, age_limit = ?,
+                    register_link = ?, support_channel_id = ?, thumbnail_url = ?, footer_icon_url = ?
+                WHERE LOWER(game_name) = LOWER(?)
+                """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            EmbedData e = g.embedData();
+            ps.setString(1, g.channelId());
+            ps.setString(2, g.roleId());
+            ps.setBoolean(3, g.autoPost());
+            ps.setString(4, g.postTime());
+            ps.setString(5, e.championPrize());
+            ps.setString(6, e.killPrize());
+            ps.setString(7, e.formatDescription());
+            ps.setString(8, e.gun());
+            ps.setString(9, e.map());
+            ps.setString(10, e.agent());
+            ps.setString(11, e.registerDeadline());
+            ps.setString(12, e.matchTime());
+            ps.setString(13, e.rankLimit());
+            ps.setString(14, e.ageLimit());
+            ps.setString(15, e.registerLink());
+            ps.setString(16, e.supportChannelId());
+            ps.setString(17, e.thumbnailUrl());
+            ps.setString(18, e.footerIconUrl());
+            ps.setString(19, g.gameName());
+
+            int rows = ps.executeUpdate();
+            logger.debug("Updated game config '{}': {} row(s) affected.", g.gameName(), rows);
+        } catch (SQLException ex) {
+            logger.error("Failed to update game config '{}': {}", g.gameName(), ex.getMessage(), ex);
         }
-        botConfig = new BotConfig(updatedList);
-        saveConfig();
     }
 
     /**
-     * Thêm mới một config game. Nếu game đã tồn tại, sẽ bị ghi đè.
+     * Thêm mới một config game. Nếu game đã tồn tại, sẽ bị ghi đè (UPSERT).
      */
-    public synchronized void addGameConfig(GameConfig newGame) {
-        List<GameConfig> updatedList = new ArrayList<>(botConfig.games());
-        updatedList.removeIf(g -> g.gameName().equalsIgnoreCase(newGame.gameName()));
-        updatedList.add(newGame);
-        botConfig = new BotConfig(updatedList);
-        saveConfig();
+    public synchronized void addGameConfig(GameConfig g) {
+        String sql = """
+                INSERT INTO game_configs (
+                    game_name, channel_id, role_id, auto_post, post_time,
+                    champion_prize, kill_prize, format_description,
+                    gun, map, agent,
+                    register_deadline, match_time, rank_limit, age_limit,
+                    register_link, support_channel_id, thumbnail_url, footer_icon_url
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (game_name) DO UPDATE SET
+                    channel_id = EXCLUDED.channel_id, role_id = EXCLUDED.role_id,
+                    auto_post = EXCLUDED.auto_post, post_time = EXCLUDED.post_time,
+                    champion_prize = EXCLUDED.champion_prize, kill_prize = EXCLUDED.kill_prize,
+                    format_description = EXCLUDED.format_description,
+                    gun = EXCLUDED.gun, map = EXCLUDED.map, agent = EXCLUDED.agent,
+                    register_deadline = EXCLUDED.register_deadline, match_time = EXCLUDED.match_time,
+                    rank_limit = EXCLUDED.rank_limit, age_limit = EXCLUDED.age_limit,
+                    register_link = EXCLUDED.register_link, support_channel_id = EXCLUDED.support_channel_id,
+                    thumbnail_url = EXCLUDED.thumbnail_url, footer_icon_url = EXCLUDED.footer_icon_url
+                """;
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            EmbedData e = g.embedData();
+            ps.setString(1, g.gameName());
+            ps.setString(2, g.channelId());
+            ps.setString(3, g.roleId());
+            ps.setBoolean(4, g.autoPost());
+            ps.setString(5, g.postTime());
+            ps.setString(6, e.championPrize());
+            ps.setString(7, e.killPrize());
+            ps.setString(8, e.formatDescription());
+            ps.setString(9, e.gun());
+            ps.setString(10, e.map());
+            ps.setString(11, e.agent());
+            ps.setString(12, e.registerDeadline());
+            ps.setString(13, e.matchTime());
+            ps.setString(14, e.rankLimit());
+            ps.setString(15, e.ageLimit());
+            ps.setString(16, e.registerLink());
+            ps.setString(17, e.supportChannelId());
+            ps.setString(18, e.thumbnailUrl());
+            ps.setString(19, e.footerIconUrl());
+
+            ps.executeUpdate();
+            logger.debug("Added/upserted game config: {}", g.gameName());
+        } catch (SQLException ex) {
+            logger.error("Failed to add game config '{}': {}", g.gameName(), ex.getMessage(), ex);
+        }
     }
 
     /**
@@ -124,20 +193,18 @@ public class ConfigManager {
      * Trả về true nếu xóa thành công, false nếu không tìm thấy.
      */
     public synchronized boolean removeGameConfig(String gameName) {
-        List<GameConfig> updatedList = new ArrayList<>(botConfig.games());
-        boolean removed = updatedList.removeIf(g -> g.gameName().equalsIgnoreCase(gameName));
-        if (removed) {
-            botConfig = new BotConfig(updatedList);
-            saveConfig();
-        }
-        return removed;
-    }
+        String sql = "DELETE FROM game_configs WHERE LOWER(game_name) = LOWER(?)";
 
-    /**
-     * Lấy toàn bộ BotConfig.
-     */
-    public synchronized BotConfig getBotConfig() {
-        return botConfig;
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, gameName);
+            int rows = ps.executeUpdate();
+            logger.debug("Removed game config '{}': {} row(s) deleted.", gameName, rows);
+            return rows > 0;
+        } catch (SQLException e) {
+            logger.error("Failed to remove game config '{}': {}", gameName, e.getMessage(), e);
+            return false;
+        }
     }
 
     /**
@@ -167,20 +234,33 @@ public class ConfigManager {
     }
 
     /**
-     * Tạo config mặc định với dữ liệu mẫu Valorant.
+     * Map ResultSet row thành GameConfig record.
      */
-    private BotConfig createDefaultConfig() {
-        EmbedData valorantEmbed = getDefaultEmbedTemplate();
-
-        GameConfig valorant = new GameConfig(
-                "Valorant",
-                "000000000000000000",
-                "000000000000000000",
-                false,
-                "18:00",
-                valorantEmbed
+    private GameConfig mapResultSetToGameConfig(ResultSet rs) throws SQLException {
+        EmbedData embedData = new EmbedData(
+                rs.getString("champion_prize"),
+                rs.getString("kill_prize"),
+                rs.getString("format_description"),
+                rs.getString("gun"),
+                rs.getString("map"),
+                rs.getString("agent"),
+                rs.getString("register_deadline"),
+                rs.getString("match_time"),
+                rs.getString("rank_limit"),
+                rs.getString("age_limit"),
+                rs.getString("register_link"),
+                rs.getString("support_channel_id"),
+                rs.getString("thumbnail_url"),
+                rs.getString("footer_icon_url")
         );
 
-        return new BotConfig(List.of(valorant));
+        return new GameConfig(
+                rs.getString("game_name"),
+                rs.getString("channel_id"),
+                rs.getString("role_id"),
+                rs.getBoolean("auto_post"),
+                rs.getString("post_time"),
+                embedData
+        );
     }
 }
