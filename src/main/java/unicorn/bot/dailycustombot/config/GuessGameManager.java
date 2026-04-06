@@ -32,19 +32,40 @@ public class GuessGameManager {
     /**
      * Tạo một session game mới.
      */
-    public boolean createSession(String messageId, String gameType, String videoUrl, String actualRank) {
-        String sql = "INSERT INTO minigame_sessions (message_id, game_type, video_url, actual_rank, status) VALUES (?, ?, ?, ?, 'OPEN')";
+    public boolean createSession(String messageId, String gameType, String videoUrl, String actualRank, String reward) {
+        String sql = "INSERT INTO minigame_sessions (message_id, game_type, video_url, actual_rank, status, reward) VALUES (?, ?, ?, ?, 'OPEN', ?)";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, messageId);
             ps.setString(2, gameType);
             ps.setString(3, videoUrl);
             ps.setString(4, actualRank);
+            ps.setString(5, reward);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             logger.error("Failed to create minigame session {}: {}", messageId, e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Lấy phần thưởng của session.
+     */
+    public Optional<String> getReward(String messageId) {
+        String sql = "SELECT reward FROM minigame_sessions WHERE message_id = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, messageId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String reward = rs.getString("reward");
+                    return Optional.ofNullable(reward == null || reward.isEmpty() ? null : reward);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get session reward {}: {}", messageId, e.getMessage());
+        }
+        return Optional.empty();
     }
 
     /**

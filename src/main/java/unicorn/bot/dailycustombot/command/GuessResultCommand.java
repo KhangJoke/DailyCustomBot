@@ -25,12 +25,17 @@ public class GuessResultCommand {
         }
 
         String messageId = event.getOption("message_id", OptionMapping::getAsString);
+        Integer winnerCountParam = event.getOption("winner_count", OptionMapping::getAsInt);
+
         if (messageId == null) {
             event.reply("❌ Thiếu Message ID!").setEphemeral(true).queue();
             return;
         }
 
+        int winnerCount = (winnerCountParam != null && winnerCountParam > 0) ? winnerCountParam : 1;
+
         GuessGameManager gameManager = GuessGameManager.getInstance();
+        String finalReward = gameManager.getReward(messageId).orElse("10k (1 giờ chơi)");
 
         Optional<String> optStatus = gameManager.getSessionStatus(messageId);
         if (optStatus.isEmpty()) {
@@ -73,15 +78,22 @@ public class GuessResultCommand {
             return;
         }
 
-        // Chọn ngẫu nhiên 1 người
-        String winnerId = correctGuessers.get(random.nextInt(correctGuessers.size()));
+        // Chọn ngẫu nhiên N người
+        java.util.Collections.shuffle(correctGuessers, random);
+        int actualWinners = Math.min(winnerCount, correctGuessers.size());
+        List<String> winners = correctGuessers.subList(0, actualWinners);
+
+        StringBuilder winnersListText = new StringBuilder();
+        for (String wId : winners) {
+            winnersListText.append("<@").append(wId).append("> ");
+        }
 
         EmbedBuilder embed = new EmbedBuilder()
                 .setTitle("🎉 KẾT QUẢ MINI GAME ĐOÁN RANK 🎉")
                 .setColor(Color.GREEN)
                 .setDescription("Đáp án chính xác là: " + formattedRank + "\n\n" +
-                        "Chúc mừng <@" + winnerId + "> đã may mắn trúng thưởng!\n\n" +
-                        "🎁 **Phần thưởng:** 10k (1 giờ chơi)\n" +
+                        "Chúc mừng " + winnersListText.toString().trim() + " đã may mắn trúng thưởng!\n\n" +
+                        "🎁 **Phần thưởng:** " + finalReward + "\n" +
                         "⏳ **Lưu ý:** Vui lòng tạo Ticket hoặc nhắn tin để lại Tên Tài Khoản Game trong vòng **3 ngày** để được nạp, nếu không phần thưởng sẽ bị hủy.")
                 .setFooter("Cảm ơn tất cả mọi người đã tham gia!");
 

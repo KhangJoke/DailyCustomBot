@@ -170,11 +170,13 @@ public class DatabaseManager {
                     game_type VARCHAR(20) DEFAULT 'UNKNOWN',
                     video_url TEXT NOT NULL,
                     actual_rank VARCHAR(50) NOT NULL,
-                    status VARCHAR(20) DEFAULT 'OPEN'
+                    status VARCHAR(20) DEFAULT 'OPEN',
+                    reward TEXT DEFAULT ''
                 );
                 """;
 
         String alterMinigameSessions = "ALTER TABLE minigame_sessions ADD COLUMN IF NOT EXISTS game_type VARCHAR(20) DEFAULT 'UNKNOWN';";
+        String alterMinigameReward = "ALTER TABLE minigame_sessions ADD COLUMN IF NOT EXISTS reward TEXT DEFAULT '';";
 
         String createMinigameGuesses = """
                 CREATE TABLE IF NOT EXISTS minigame_guesses (
@@ -194,6 +196,7 @@ public class DatabaseManager {
             stmt.execute(insertDefaultTicketTypes);
             stmt.execute(createMinigameSessions);
             stmt.execute(alterMinigameSessions);
+            stmt.execute(alterMinigameReward);
             stmt.execute(createMinigameGuesses);
             logger.info("Database tables initialized successfully.");
         } catch (SQLException e) {

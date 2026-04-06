@@ -61,7 +61,7 @@ public class GuessPostCommand {
                 .queue(message -> {
                     // Lưu vào DB
                     GuessGameManager.getInstance().createSession(message.getId(), game.toUpperCase(), videoUrl,
-                            actualRank);
+                            actualRank, finalReward);
 
                     // Thả reaction
                     for (String rankName : ranksList) {

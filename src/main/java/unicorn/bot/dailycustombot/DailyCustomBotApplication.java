@@ -283,7 +283,9 @@ public class DailyCustomBotApplication {
                                                                 .enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "message_id",
-                                                                                "ID của bài đăng game", true)))
+                                                                                "ID của bài đăng game", true),
+                                                                new OptionData(OptionType.INTEGER, "winner_count",
+                                                                                "Số người trúng thưởng (Mặc định: 1)", false)))
                                 .queue(
                                                 commands -> logger.info("Registered {} slash commands successfully!",
                                                                 commands.size()),
