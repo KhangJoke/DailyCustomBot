@@ -97,7 +97,7 @@ public class GuessResultCommand {
                 .setDescription("Đáp án chính xác là: " + formattedRank + "\n\n" +
                         "Chúc mừng " + winnersListText.toString().trim() + " đã may mắn trúng thưởng!\n\n" +
                         "🎁 **Phần thưởng:** " + finalReward + "\n" +
-                        "⏳ **Lưu ý:** Vui lòng tạo Ticket ở <#1490273404735983807> với cú pháp: Tên tài khoản Unicorn + Ngày nhận thưởng (ví dụ: hoangtan123 + 23/5) trong vòng 3 ngày (72h) kể từ kết quả được công bố để được nhận phần thưởng. Trường hợp tạo ticket quá hạn 3 ngày thì phần thưởng sẽ bị hủy. **3 ngày** để được nạp, nếu không phần thưởng sẽ bị hủy.")
+                        "⏳ **Lưu ý:** Vui lòng tạo Ticket ở <#1490273404735983807> với cú pháp: Tên tài khoản Unicorn + Ngày nhận thưởng (ví dụ: hoangtan123 + 23/5) trong vòng 3 ngày (72h) kể từ kết quả được công bố để được nhận phần thưởng. Trường hợp tạo ticket quá hạn 3 ngày thì phần thưởng sẽ bị hủy.")
                 .setFooter("Cảm ơn tất cả mọi người đã tham gia!");
 
         // Trả lời công khai
