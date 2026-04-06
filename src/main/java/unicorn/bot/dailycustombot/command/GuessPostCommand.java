@@ -49,9 +49,11 @@ public class GuessPostCommand {
                         "*Lưu ý: Hệ thống chỉ lưu một lựa chọn cuối cùng của bạn.*")
                 .setFooter("Admin sẽ chốt kết quả vào ngày mai!");
 
-        // Gửi Message vào channel hiện tại
-        event.getChannel().sendMessage(videoUrl)
-                .addEmbeds(embed.build())
+        // Gửi Video Clip riêng ra một tin nhắn trước để Discord tự render giao diện khung Player
+        event.getChannel().sendMessage(videoUrl).queue();
+
+        // Gửi Embed thông báo Game và dán Reaction xuống dưới
+        event.getChannel().sendMessageEmbeds(embed.build())
                 .queue(message -> {
                     // Lưu vào DB
                     GuessGameManager.getInstance().createSession(message.getId(), game.toUpperCase(), videoUrl, actualRank);
