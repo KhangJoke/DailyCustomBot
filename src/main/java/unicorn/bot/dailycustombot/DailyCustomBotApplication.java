@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.TimeZone;
 
 /**
  * Entry point chính của Discord Bot Daily Custom.
@@ -31,6 +32,9 @@ public class DailyCustomBotApplication {
     private static final Logger logger = LoggerFactory.getLogger(DailyCustomBotApplication.class);
 
     public static void main(String[] args) {
+        // Cố định Timezone để tránh lỗi "Asia/Saigon" với PostgreSQL JDBC
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+
         // Đọc token: ưu tiên file .env, fallback sang environment variable
         String token = loadToken();
         if (token == null || token.isBlank()) {

@@ -26,9 +26,28 @@ public class DatabaseManager {
 
     private DatabaseManager(String databaseUrl) {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(databaseUrl.startsWith("jdbc:")
-                ? databaseUrl
-                : "jdbc:" + databaseUrl);
+
+        // Xử lý định dạng postgresql://user:pass@host:port/db của Railway
+        if (databaseUrl.startsWith("postgresql://") || databaseUrl.startsWith("postgres://")) {
+            try {
+                java.net.URI uri = new java.net.URI(databaseUrl);
+                String jdbcUrl = "jdbc:postgresql://" + uri.getHost() + ":" + (uri.getPort() != -1 ? uri.getPort() : 5432) + uri.getPath();
+                config.setJdbcUrl(jdbcUrl);
+
+                if (uri.getUserInfo() != null) {
+                    String[] userInfo = uri.getUserInfo().split(":", 2);
+                    config.setUsername(userInfo[0]);
+                    if (userInfo.length > 1) {
+                        config.setPassword(userInfo[1]);
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Failed to parse DATABASE_URL: {}", e.getMessage());
+                config.setJdbcUrl(databaseUrl.startsWith("jdbc:") ? databaseUrl : "jdbc:" + databaseUrl);
+            }
+        } else {
+            config.setJdbcUrl(databaseUrl.startsWith("jdbc:") ? databaseUrl : "jdbc:" + databaseUrl);
+        }
         config.setMaximumPoolSize(5);
         config.setMinimumIdle(1);
         config.setIdleTimeout(300_000);        // 5 minutes
