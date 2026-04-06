@@ -30,12 +30,10 @@ public class GuessPostCommand {
         String actualRank = event.getOption("actual_rank", OptionMapping::getAsString);
         String reward = event.getOption("reward", OptionMapping::getAsString);
 
-        if (game == null || videoUrl == null || actualRank == null) {
+        if (game == null || videoUrl == null || actualRank == null || reward == null) {
             event.reply("❌ Thiếu tham số!").setEphemeral(true).queue();
             return;
         }
-
-        String finalReward = reward != null && !reward.trim().isEmpty() ? reward : "10k (1 giờ chơi) cho 1 bạn may mắn đoán trúng!";
 
         // Defer reply để bot có thời gian đọc và tải emoji
         event.deferReply(true).queue();
@@ -48,7 +46,7 @@ public class GuessPostCommand {
                 .setTitle("🎮 MINI GAME: ĐOÁN RANK " + gameText)
                 .setColor(isValorant ? Color.RED : Color.CYAN)
                 .setDescription("Xem clip bên trên và đoán xem người chơi đang ở mức rank nào nhé!\n" +
-                        "Phần thưởng: **" + finalReward + "**\n\n" +
+                        "Phần thưởng: **" + reward + "**\n\n" +
                         "*Lưu ý: Hệ thống chỉ lưu một lựa chọn cuối cùng của bạn.*")
                 .setFooter("Admin sẽ chốt kết quả vào ngày mai!");
 
@@ -61,7 +59,7 @@ public class GuessPostCommand {
                 .queue(message -> {
                     // Lưu vào DB
                     GuessGameManager.getInstance().createSession(message.getId(), game.toUpperCase(), videoUrl,
-                            actualRank, finalReward);
+                            actualRank, reward);
 
                     // Thả reaction
                     for (String rankName : ranksList) {

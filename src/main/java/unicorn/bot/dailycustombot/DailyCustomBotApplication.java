@@ -275,7 +275,7 @@ public class DailyCustomBotApplication {
                                                                                 "Tên Rank ĐÚNG (Auto-Complete)", true,
                                                                                 true),
                                                                 new OptionData(OptionType.STRING, "reward",
-                                                                                "Phần thưởng (Mặc định: 10k/1h chơi)", false)),
+                                                                                "Phần thưởng của minigame", true)),
 
                                 // /guess_result - Kết quả game
                                 Commands.slash("guess_result", "Công bố kết quả mini game")
@@ -285,7 +285,7 @@ public class DailyCustomBotApplication {
                                                                 new OptionData(OptionType.STRING, "message_id",
                                                                                 "ID của bài đăng game", true),
                                                                 new OptionData(OptionType.INTEGER, "winner_count",
-                                                                                "Số người trúng thưởng (Mặc định: 1)", false)))
+                                                                                "Số người trúng thưởng", true)))
                                 .queue(
                                                 commands -> logger.info("Registered {} slash commands successfully!",
                                                                 commands.size()),

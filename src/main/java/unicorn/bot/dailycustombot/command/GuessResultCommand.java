@@ -25,14 +25,17 @@ public class GuessResultCommand {
         }
 
         String messageId = event.getOption("message_id", OptionMapping::getAsString);
-        Integer winnerCountParam = event.getOption("winner_count", OptionMapping::getAsInt);
+        Integer winnerCount = event.getOption("winner_count", OptionMapping::getAsInt);
 
-        if (messageId == null) {
-            event.reply("❌ Thiếu Message ID!").setEphemeral(true).queue();
+        if (messageId == null || winnerCount == null) {
+            event.reply("❌ Thiếu Message ID hoặc số người trúng thưởng!").setEphemeral(true).queue();
             return;
         }
 
-        int winnerCount = (winnerCountParam != null && winnerCountParam > 0) ? winnerCountParam : 1;
+        if (winnerCount <= 0) {
+            event.reply("❌ Số lượng người trúng giải phải lớn hơn 0!").setEphemeral(true).queue();
+            return;
+        }
 
         GuessGameManager gameManager = GuessGameManager.getInstance();
         String finalReward = gameManager.getReward(messageId).orElse("10k (1 giờ chơi)");
@@ -94,7 +97,7 @@ public class GuessResultCommand {
                 .setDescription("Đáp án chính xác là: " + formattedRank + "\n\n" +
                         "Chúc mừng " + winnersListText.toString().trim() + " đã may mắn trúng thưởng!\n\n" +
                         "🎁 **Phần thưởng:** " + finalReward + "\n" +
-                        "⏳ **Lưu ý:** Vui lòng tạo Ticket hoặc nhắn tin để lại Tên Tài Khoản Game trong vòng **3 ngày** để được nạp, nếu không phần thưởng sẽ bị hủy.")
+                        "⏳ **Lưu ý:** Vui lòng tạo Ticket ở <#1490273404735983807> với cú pháp: Tên tài khoản Unicorn + Ngày nhận thưởng (ví dụ: hoangtan123 + 23/5) trong vòng 3 ngày (72h) kể từ kết quả được công bố để được nhận phần thưởng. Trường hợp tạo ticket quá hạn 3 ngày thì phần thưởng sẽ bị hủy. **3 ngày** để được nạp, nếu không phần thưởng sẽ bị hủy.")
                 .setFooter("Cảm ơn tất cả mọi người đã tham gia!");
 
         // Trả lời công khai
