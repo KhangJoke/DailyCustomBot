@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import unicorn.bot.dailycustombot.DailyCustomBotApplication;
 import unicorn.bot.dailycustombot.config.ConfigManager;
+import unicorn.bot.dailycustombot.config.PermissionManager;
 
 /**
  * Handler cho lệnh /daily_remove.
@@ -16,6 +17,12 @@ public class DailyRemoveCommand {
     private static final Logger logger = LoggerFactory.getLogger(DailyRemoveCommand.class);
 
     public void handle(SlashCommandInteractionEvent event) {
+        if (!PermissionManager.getInstance().hasAccess(event.getMember(), "daily")) {
+            event.reply("❌ Bạn không có quyền sử dụng lệnh này (Yêu cầu quyền hạn quản lý giải đấu)!")
+                    .setEphemeral(true).queue();
+            return;
+        }
+
         String gameName = event.getOption("game", OptionMapping::getAsString);
 
         if (gameName == null) {

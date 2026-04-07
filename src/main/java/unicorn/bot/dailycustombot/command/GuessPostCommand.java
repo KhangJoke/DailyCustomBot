@@ -1,12 +1,12 @@
 package unicorn.bot.dailycustombot.command;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import unicorn.bot.dailycustombot.config.GuessGameManager;
+import unicorn.bot.dailycustombot.config.PermissionManager;
 import unicorn.bot.dailycustombot.listener.GuessAutoCompleteListener;
 
 import java.awt.Color;
@@ -20,8 +20,9 @@ public class GuessPostCommand {
     private static final Logger logger = LoggerFactory.getLogger(GuessPostCommand.class);
 
     public void handle(SlashCommandInteractionEvent event) {
-        if (!event.getMember().hasPermission(Permission.ADMINISTRATOR)) {
-            event.reply("❌ Bạn không có quyền sử dụng lệnh này!").setEphemeral(true).queue();
+        if (!PermissionManager.getInstance().hasAccess(event.getMember(), "minigame")) {
+            event.reply("❌ Bạn không có quyền sử dụng lệnh này (Yêu cầu quyền hạn quản lý minigame)!")
+                    .setEphemeral(true).queue();
             return;
         }
 

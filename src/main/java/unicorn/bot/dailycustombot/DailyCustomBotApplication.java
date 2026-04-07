@@ -20,6 +20,7 @@ import unicorn.bot.dailycustombot.listener.TicketSelectMenuListener;
 import unicorn.bot.dailycustombot.listener.GuessReactionListener;
 import unicorn.bot.dailycustombot.listener.GuessAutoCompleteListener;
 import unicorn.bot.dailycustombot.scheduler.DailyScheduler;
+import unicorn.bot.dailycustombot.config.PermissionManager;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -58,6 +59,10 @@ public class DailyCustomBotApplication {
                 }
                 DatabaseManager.init(databaseUrl);
                 logger.info("DatabaseManager initialized.");
+
+                // Khởi tạo PermissionManager
+                PermissionManager.getInstance();
+                logger.info("PermissionManager initialized.");
 
                 // Khởi tạo ConfigManager
                 ConfigManager.getInstance();
@@ -131,6 +136,7 @@ public class DailyCustomBotApplication {
                 jda.updateCommands().addCommands(
                                 // /daily_update - Cập nhật config
                                 Commands.slash("daily_update", "Cập nhật thông tin giải đấu Daily Custom")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "game", "Tên game",
                                                                                 true)
@@ -165,6 +171,7 @@ public class DailyCustomBotApplication {
 
                                 // /daily_auto - Bật/tắt auto-post
                                 Commands.slash("daily_auto", "Bật/tắt tự động đăng bài Daily Custom")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "game", "Tên game",
                                                                                 true)
@@ -182,6 +189,7 @@ public class DailyCustomBotApplication {
 
                                 // /daily_post_now - Đăng ngay
                                 Commands.slash("daily_post_now", "Đăng bài Daily Custom ngay lập tức")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "game", "Tên game",
                                                                                 true)
@@ -192,6 +200,7 @@ public class DailyCustomBotApplication {
 
                                 // /daily_view - Xem config
                                 Commands.slash("daily_view", "Xem cấu hình game hiện tại")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "game",
                                                                                 "Tên game (để trống sẽ liệt kê tất cả)",
@@ -203,6 +212,7 @@ public class DailyCustomBotApplication {
 
                                 // /daily_add - Thêm game mới
                                 Commands.slash("daily_add", "Thêm một tựa game mới vào hệ thống")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "game",
                                                                                 "Tên game mới (VD: PUBG)", true),
@@ -214,6 +224,7 @@ public class DailyCustomBotApplication {
 
                                 // /daily_remove - Xóa game
                                 Commands.slash("daily_remove", "Xóa một tựa game khỏi hệ thống")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "game",
                                                                                 "Tên game cần xóa", true)
@@ -226,6 +237,7 @@ public class DailyCustomBotApplication {
 
                                 // /ticket_setup - Thiết lập panel ticket
                                 Commands.slash("ticket_setup", "Thiết lập hệ thống ticket hỗ trợ")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "category_id",
                                                                                 "ID Category để tạo channel ticket",
@@ -240,6 +252,7 @@ public class DailyCustomBotApplication {
 
                                 // /ticket_add_type - Thêm loại ticket mới
                                 Commands.slash("ticket_add_type", "Thêm một loại ticket mới")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "id",
                                                                                 "ID loại ticket (VD: bug_report)",
@@ -253,6 +266,7 @@ public class DailyCustomBotApplication {
 
                                 // /ticket_remove_type - Xóa loại ticket
                                 Commands.slash("ticket_remove_type", "Xóa một loại ticket")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
                                                 .addOptions(
                                                                 new OptionData(OptionType.STRING, "id",
                                                                                 "ID loại ticket cần xóa", true)),
@@ -285,7 +299,33 @@ public class DailyCustomBotApplication {
                                                                 new OptionData(OptionType.STRING, "message_id",
                                                                                 "ID của bài đăng game", true),
                                                                 new OptionData(OptionType.INTEGER, "winner_count",
-                                                                                "Số người trúng thưởng", true)))
+                                                                                "Số người trúng thưởng", true)),
+                                                
+                                // ===== PERMISSION SYSTEM COMMANDS =====
+                                
+                                // /perm_add - Cấp quyền
+                                Commands.slash("perm_add", "Cấp quyền sử dụng lệnh cho Role")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
+                                                .addOptions(
+                                                                new OptionData(OptionType.ROLE, "role", "Role cần được cấp quyền", true),
+                                                                new OptionData(OptionType.STRING, "group", "Nhóm lệnh (daily, ticket, minigame)", true)
+                                                                                .addChoice("Quản lý giải đấu (daily)", "daily")
+                                                                                .addChoice("Quản lý ticket (ticket)", "ticket")
+                                                                                .addChoice("Quản lý mini game (minigame)", "minigame")),
+
+                                // /perm_remove - Xóa quyền
+                                Commands.slash("perm_remove", "Xóa quyền sử dụng lệnh của Role")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
+                                                .addOptions(
+                                                                new OptionData(OptionType.ROLE, "role", "Role cần xóa quyền", true),
+                                                                new OptionData(OptionType.STRING, "group", "Nhóm lệnh", true)
+                                                                                .addChoice("Quản lý giải đấu (daily)", "daily")
+                                                                                .addChoice("Quản lý ticket (ticket)", "ticket")
+                                                                                .addChoice("Quản lý mini game (minigame)", "minigame")),
+
+                                // /perm_view - Xem danh sách quyền
+                                Commands.slash("perm_view", "Xem bảng phân quyền hiện tại trong server")
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)))
                                 .queue(
                                                 commands -> logger.info("Registered {} slash commands successfully!",
                                                                 commands.size()),

@@ -1,26 +1,27 @@
 package unicorn.bot.dailycustombot.command;
 
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import unicorn.bot.dailycustombot.config.PermissionManager;
 import unicorn.bot.dailycustombot.config.TicketConfigManager;
 import unicorn.bot.dailycustombot.model.TicketType;
 
 /**
  * Handler cho lệnh /ticket_add_type.
  * Thêm loại ticket mới vào hệ thống.
- * Yêu cầu quyền Administrator.
+ * Yêu cầu quyền quản lý ticket.
  */
 public class TicketAddTypeCommand {
 
     private static final Logger logger = LoggerFactory.getLogger(TicketAddTypeCommand.class);
 
     public void handle(SlashCommandInteractionEvent event) {
-        // Kiểm tra quyền admin
-        if (!event.getMember().hasPermission(Permission.ADMINISTRATOR)) {
-            event.reply("❌ Bạn cần quyền **Administrator** để sử dụng lệnh này!").setEphemeral(true).queue();
+        // Kiểm tra quyền
+        if (!PermissionManager.getInstance().hasAccess(event.getMember(), "ticket")) {
+            event.reply("❌ Bạn không có quyền sử dụng lệnh này (Yêu cầu quyền hạn quản lý ticket)!")
+                    .setEphemeral(true).queue();
             return;
         }
 

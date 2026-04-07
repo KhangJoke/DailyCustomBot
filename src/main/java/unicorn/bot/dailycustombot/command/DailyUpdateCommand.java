@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import unicorn.bot.dailycustombot.config.ConfigManager;
+import unicorn.bot.dailycustombot.config.PermissionManager;
 import unicorn.bot.dailycustombot.model.EmbedData;
 import unicorn.bot.dailycustombot.model.GameConfig;
 
@@ -19,6 +20,12 @@ public class DailyUpdateCommand {
     private static final Logger logger = LoggerFactory.getLogger(DailyUpdateCommand.class);
 
     public void handle(SlashCommandInteractionEvent event) {
+        if (!PermissionManager.getInstance().hasAccess(event.getMember(), "daily")) {
+            event.reply("❌ Bạn không có quyền sử dụng lệnh này (Yêu cầu quyền hạn quản lý giải đấu)!")
+                    .setEphemeral(true).queue();
+            return;
+        }
+
         String gameName = event.getOption("game", OptionMapping::getAsString);
         if (gameName == null) {
             event.reply("❌ Please select a game!").setEphemeral(true).queue();

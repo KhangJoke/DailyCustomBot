@@ -187,6 +187,15 @@ public class DatabaseManager {
                 );
                 """;
 
+        String createRolePermissions = """
+                CREATE TABLE IF NOT EXISTS role_permissions (
+                    guild_id        VARCHAR(20) NOT NULL,
+                    role_id         VARCHAR(20) NOT NULL,
+                    command_group   VARCHAR(50) NOT NULL,
+                    PRIMARY KEY (guild_id, role_id, command_group)
+                );
+                """;
+
         try (Connection conn = getConnection();
                 Statement stmt = conn.createStatement()) {
             stmt.execute(createGameConfigs);
@@ -198,6 +207,7 @@ public class DatabaseManager {
             stmt.execute(alterMinigameSessions);
             stmt.execute(alterMinigameReward);
             stmt.execute(createMinigameGuesses);
+            stmt.execute(createRolePermissions);
             logger.info("Database tables initialized successfully.");
         } catch (SQLException e) {
             logger.error("Failed to initialize database tables: {}", e.getMessage(), e);
