@@ -40,7 +40,7 @@ public class ConfigManager {
         String sql = "SELECT * FROM game_configs WHERE LOWER(game_name) = LOWER(?)";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, gameName);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -61,8 +61,8 @@ public class ConfigManager {
         String sql = "SELECT game_name FROM game_configs ORDER BY game_name";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 names.add(rs.getString("game_name"));
             }
@@ -80,8 +80,8 @@ public class ConfigManager {
         String sql = "SELECT * FROM game_configs ORDER BY game_name";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 games.add(mapResultSetToGameConfig(rs));
             }
@@ -106,7 +106,7 @@ public class ConfigManager {
                 """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             EmbedData e = g.embedData();
             ps.setString(1, g.channelId());
             ps.setString(2, g.roleId());
@@ -160,7 +160,7 @@ public class ConfigManager {
                 """;
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             EmbedData e = g.embedData();
             ps.setString(1, g.gameName());
             ps.setString(2, g.channelId());
@@ -197,7 +197,7 @@ public class ConfigManager {
         String sql = "DELETE FROM game_configs WHERE LOWER(game_name) = LOWER(?)";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, gameName);
             int rows = ps.executeUpdate();
             logger.debug("Removed game config '{}': {} row(s) deleted.", gameName, rows);
@@ -237,9 +237,9 @@ public class ConfigManager {
                         First to 40 kills
                         Không giới hạn đạn
                         Không giới hạn skill""",
-                "All",           // detail1 → Súng
-                "Pearl",         // map
-                "Tuỳ chọn",      // detail2 → Agent
+                "All", // detail1 → Súng
+                "Pearl", // map
+                "Tuỳ chọn", // detail2 → Agent
                 "17h ngày 21/03",
                 "19h15 ngày 21/03",
                 "Không giới hạn",
@@ -247,8 +247,7 @@ public class ConfigManager {
                 "https://forms.gle/example",
                 "000000000000000000",
                 "https://i.imgur.com/example.png",
-                "https://i.imgur.com/example-icon.png"
-        );
+                "https://i.imgur.com/example-icon.png");
     }
 
     /**
@@ -263,9 +262,9 @@ public class ConfigManager {
                         Custom Game 5v5
                         Summoner's Rift
                         Draft Pick""",
-                "Draft Pick",            // detail1 → Chế độ
-                "Summoner's Rift",       // map
-                "Tuỳ chọn",              // detail2 → Tướng
+                "Draft Pick", // detail1 → Chế độ
+                "Summoner's Rift", // map
+                "Tuỳ chọn", // detail2 → Tướng
                 "17h ngày 21/03",
                 "19h15 ngày 21/03",
                 "Không giới hạn",
@@ -273,8 +272,7 @@ public class ConfigManager {
                 "https://forms.gle/example",
                 "000000000000000000",
                 "https://i.imgur.com/example.png",
-                "https://i.imgur.com/example-icon.png"
-        );
+                "https://i.imgur.com/example-icon.png");
     }
 
     /**
@@ -286,9 +284,9 @@ public class ConfigManager {
                 "Giải thưởng cho `Nhà Vô Địch`",
                 "Giải thưởng phụ",
                 "Chưa cấu hình — dùng /daily_update để cập nhật",
-                "Chưa cấu hình",     // detail1
-                "Chưa cấu hình",     // map
-                "Chưa cấu hình",     // detail2
+                "Chưa cấu hình", // detail1
+                "Chưa cấu hình", // map
+                "Chưa cấu hình", // detail2
                 "Chưa cấu hình",
                 "Chưa cấu hình",
                 "Không giới hạn",
@@ -296,8 +294,7 @@ public class ConfigManager {
                 "https://forms.gle/example",
                 "000000000000000000",
                 "https://i.imgur.com/example.png",
-                "https://i.imgur.com/example-icon.png"
-        );
+                "https://i.imgur.com/example-icon.png");
     }
 
     /**
@@ -318,8 +315,7 @@ public class ConfigManager {
                 rs.getString("register_link"),
                 rs.getString("support_channel_id"),
                 rs.getString("thumbnail_url"),
-                rs.getString("footer_icon_url")
-        );
+                rs.getString("footer_icon_url"));
 
         return new GameConfig(
                 rs.getString("game_name"),
@@ -327,7 +323,6 @@ public class ConfigManager {
                 rs.getString("role_id"),
                 rs.getBoolean("auto_post"),
                 rs.getString("post_time"),
-                embedData
-        );
+                embedData);
     }
 }

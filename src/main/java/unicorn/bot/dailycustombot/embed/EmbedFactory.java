@@ -70,9 +70,8 @@ public class EmbedFactory {
                                 .formatted(data.registerLink());
 
                 String noteContent = """
-                                • Mọi vấn đề xin vui lòng liên hệ mod tại <#%s>.
-                                • Vui lòng đăng ký sớm để giữ slot, số lượng có hạn!"""
-                                .formatted(data.supportChannelId());
+                                • Mọi vấn đề xin vui lòng liên hệ mod tại <#1483141799961694259> hoặc tạo ticket tại <#1490273404735983807>.
+                                • Vui lòng đăng ký sớm để giữ slot, số lượng có hạn!""";
 
                 String emoji = type.fieldEmoji();
                 return new EmbedBuilder()
@@ -92,7 +91,7 @@ public class EmbedFactory {
                 EmbedData data = gameConfig.embedData();
                 String todayDate = LocalDate.now().format(DATE_FMT);
 
-                String title = "▬▬▬ DAILY CUSTOM LEAGUE OF LEGENDS (%s) ▬▬▬".formatted(todayDate);
+                String title = "▬▬DAILY CUSTOM LEAGUE OF LEGENDS (%s)▬▬".formatted(todayDate);
 
                 String prizeContent = """
                                 • %s
@@ -177,9 +176,8 @@ public class EmbedFactory {
                                 .formatted(data.registerLink());
 
                 String noteContent = """
-                                • Mọi vấn đề xin vui lòng liên hệ mod tại <#%s>.
-                                • Vui lòng đăng ký sớm để giữ slot, số lượng có hạn!"""
-                                .formatted(data.supportChannelId());
+                                • Mọi vấn đề xin vui lòng liên hệ mod tại <#1483141799961694259> hoặc tạo ticket tại <#1490273404735983807>.
+                                • Vui lòng đăng ký sớm để giữ slot, số lượng có hạn!""";
 
                 String emoji = type.fieldEmoji();
                 return new EmbedBuilder()
