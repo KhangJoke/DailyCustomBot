@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import unicorn.bot.dailycustombot.model.BotConfig;
 import unicorn.bot.dailycustombot.model.EmbedData;
 import unicorn.bot.dailycustombot.model.GameConfig;
+import unicorn.bot.dailycustombot.model.GameType;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -215,11 +216,11 @@ public class ConfigManager {
      * @return EmbedData với nội dung mặc định tương ứng
      */
     public EmbedData getDefaultEmbedTemplate(String gameName) {
-        String normalized = gameName.toLowerCase().trim();
-        return switch (normalized) {
-            case "valorant", "val" -> getValorantDefault();
-            case "lol", "league of legends", "lmht", "liên minh" -> getLoLDefault();
-            default -> getGenericDefault(gameName);
+        GameType type = GameType.fromName(gameName);
+        return switch (type) {
+            case VALORANT -> getValorantDefault();
+            case LOL -> getLoLDefault();
+            case GENERIC -> getGenericDefault(gameName);
         };
     }
 

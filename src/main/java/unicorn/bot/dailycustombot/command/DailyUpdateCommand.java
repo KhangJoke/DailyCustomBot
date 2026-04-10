@@ -8,6 +8,7 @@ import unicorn.bot.dailycustombot.config.ConfigManager;
 import unicorn.bot.dailycustombot.config.PermissionManager;
 import unicorn.bot.dailycustombot.model.EmbedData;
 import unicorn.bot.dailycustombot.model.GameConfig;
+import unicorn.bot.dailycustombot.model.GameType;
 
 import java.util.Optional;
 
@@ -67,15 +68,8 @@ public class DailyUpdateCommand {
 
         logger.info("Updated config for game: {}", gameName);
 
-        // Hiển thị label phù hợp theo game
-        String normalized = gameName.toLowerCase().trim();
-        String detail1Label;
-        String detail2Label;
-        switch (normalized) {
-            case "valorant", "val" -> { detail1Label = "Súng"; detail2Label = "Agent"; }
-            case "lol", "league of legends", "lmht", "liên minh" -> { detail1Label = "Chế độ"; detail2Label = "Tướng"; }
-            default -> { detail1Label = "Chi tiết 1"; detail2Label = "Chi tiết 2"; }
-        }
+        // Hiển thị label phù hợp theo game từ GameType
+        GameType type = GameType.fromName(gameName);
 
         String reply = """
                 ✅ Successfully updated config for **%s**!
@@ -89,8 +83,8 @@ public class DailyUpdateCommand {
                 Use `/daily_post_now %s` to post immediately.""".formatted(
                 gameName,
                 newData.map(),
-                detail1Label, newData.detail1(),
-                detail2Label, newData.detail2(),
+                type.detail1Label(), newData.detail1(),
+                type.detail2Label(), newData.detail2(),
                 newData.registerDeadline(),
                 newData.matchTime(),
                 gameName

@@ -4,21 +4,17 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import unicorn.bot.dailycustombot.model.EmbedData;
 import unicorn.bot.dailycustombot.model.GameConfig;
+import unicorn.bot.dailycustombot.model.GameType;
 
-import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 /**
  * Factory tạo Discord MessageEmbed từ GameConfig.
- * Hỗ trợ render khác nhau theo từng tựa game:
- * - Valorant: Súng / Map / Agent
- * - LoL: Chế độ / Map / Tướng
- * - Generic: Chi tiết 1 / Map / Chi tiết 2
+ * Hỗ trợ render khác nhau theo từng tựa game dựa trên {@link GameType}.
  */
 public class EmbedFactory {
 
-        private static final Color EMBED_COLOR = new Color(0xE56A1E);
         private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM");
 
         private EmbedFactory() {
@@ -27,19 +23,19 @@ public class EmbedFactory {
 
         /**
          * Build MessageEmbed hoàn chỉnh từ config của một game.
-         * Tự động chọn layout phù hợp theo gameName.
+         * Tự động chọn layout phù hợp theo gameName thông qua GameType.
          */
         public static MessageEmbed buildEmbed(GameConfig gameConfig) {
-                String normalized = gameConfig.gameName().toLowerCase().trim();
-                return switch (normalized) {
-                        case "valorant", "val" -> buildValorantEmbed(gameConfig);
-                        case "lol", "league of legends", "lmht", "liên minh" -> buildLoLEmbed(gameConfig);
-                        default -> buildGenericEmbed(gameConfig);
+                GameType type = GameType.fromName(gameConfig.gameName());
+                return switch (type) {
+                        case VALORANT -> buildValorantEmbed(gameConfig, type);
+                        case LOL -> buildLoLEmbed(gameConfig, type);
+                        case GENERIC -> buildGenericEmbed(gameConfig, type);
                 };
         }
 
         // ===== VALORANT =====
-        private static MessageEmbed buildValorantEmbed(GameConfig gameConfig) {
+        private static MessageEmbed buildValorantEmbed(GameConfig gameConfig, GameType type) {
                 EmbedData data = gameConfig.embedData();
                 String todayDate = LocalDate.now().format(DATE_FMT);
 
@@ -50,20 +46,21 @@ public class EmbedFactory {
                                 • %s""".formatted(data.championPrize(), data.killPrize());
 
                 String formatContent = """
-                                __**CUSTOM DEATHMATCH**__
+                                __**%s**__
                                 ```text
                                 %s
                                 ```
-                                • **Súng:** %s
+                                • **%s:** %s
                                 • **Map:** %s
-                                • **Agent:** %s
+                                • **%s:** %s
                                 • **Đăng ký:** %s — Thi đấu: %s
                                 • **Rank:** %s
                                 • **Tuổi:** %s""".formatted(
+                                type.subHeader(),
                                 data.formatDescription(),
-                                data.detail1(),
+                                type.detail1Label(), data.detail1(),
                                 data.map(),
-                                data.detail2(),
+                                type.detail2Label(), data.detail2(),
                                 data.registerDeadline(),
                                 data.matchTime(),
                                 data.rankLimit(),
@@ -77,20 +74,21 @@ public class EmbedFactory {
                                 • Vui lòng đăng ký sớm để giữ slot, số lượng có hạn!"""
                                 .formatted(data.supportChannelId());
 
+                String emoji = type.fieldEmoji();
                 return new EmbedBuilder()
                                 .setTitle(title)
-                                .setColor(EMBED_COLOR)
-                                .addField("🟠 GIẢI THƯỞNG", prizeContent, false)
-                                .addField("🟠 THỂ THỨC", formatContent, false)
-                                .addField("🟠 MỞ ĐĂNG KÝ", registerContent, false)
-                                .addField("🟠 LƯU Ý", noteContent, false)
+                                .setColor(type.embedColor())
+                                .addField(emoji + " GIẢI THƯỞNG", prizeContent, false)
+                                .addField(emoji + " THỂ THỨC", formatContent, false)
+                                .addField(emoji + " MỞ ĐĂNG KÝ", registerContent, false)
+                                .addField(emoji + " LƯU Ý", noteContent, false)
                                 .setThumbnail(data.thumbnailUrl())
-                                .setFooter("THE DEATHMATCH KING", data.footerIconUrl())
+                                .setFooter(type.footerText(), data.footerIconUrl())
                                 .build();
         }
 
         // ===== LEAGUE OF LEGENDS =====
-        private static MessageEmbed buildLoLEmbed(GameConfig gameConfig) {
+        private static MessageEmbed buildLoLEmbed(GameConfig gameConfig, GameType type) {
                 EmbedData data = gameConfig.embedData();
                 String todayDate = LocalDate.now().format(DATE_FMT);
 
@@ -101,20 +99,21 @@ public class EmbedFactory {
                                 • %s""".formatted(data.championPrize(), data.killPrize());
 
                 String formatContent = """
-                                __**CUSTOM MATCH**__
+                                __**%s**__
                                 ```text
                                 %s
                                 ```
-                                • **Chế độ:** %s
+                                • **%s:** %s
                                 • **Map:** %s
-                                • **Tướng:** %s
+                                • **%s:** %s
                                 • **Đăng ký:** %s — Thi đấu: %s
                                 • **Rank:** %s
                                 • **Tuổi:** %s""".formatted(
+                                type.subHeader(),
                                 data.formatDescription(),
-                                data.detail1(),
+                                type.detail1Label(), data.detail1(),
                                 data.map(),
-                                data.detail2(),
+                                type.detail2Label(), data.detail2(),
                                 data.registerDeadline(),
                                 data.matchTime(),
                                 data.rankLimit(),
@@ -128,20 +127,21 @@ public class EmbedFactory {
                                 • Vui lòng đăng ký sớm để giữ slot, số lượng có hạn!"""
                                 .formatted(data.supportChannelId());
 
+                String emoji = type.fieldEmoji();
                 return new EmbedBuilder()
                                 .setTitle(title)
-                                .setColor(new Color(0x0BC6E3)) // Màu xanh LoL
-                                .addField("🔵 GIẢI THƯỞNG", prizeContent, false)
-                                .addField("🔵 THỂ THỨC", formatContent, false)
-                                .addField("🔵 MỞ ĐĂNG KÝ", registerContent, false)
-                                .addField("🔵 LƯU Ý", noteContent, false)
+                                .setColor(type.embedColor())
+                                .addField(emoji + " GIẢI THƯỞNG", prizeContent, false)
+                                .addField(emoji + " THỂ THỨC", formatContent, false)
+                                .addField(emoji + " MỞ ĐĂNG KÝ", registerContent, false)
+                                .addField(emoji + " LƯU Ý", noteContent, false)
                                 .setThumbnail(data.thumbnailUrl())
-                                .setFooter("THE RIFT KING", data.footerIconUrl())
+                                .setFooter(type.footerText(), data.footerIconUrl())
                                 .build();
         }
 
         // ===== GENERIC (các game khác) =====
-        private static MessageEmbed buildGenericEmbed(GameConfig gameConfig) {
+        private static MessageEmbed buildGenericEmbed(GameConfig gameConfig, GameType type) {
                 EmbedData data = gameConfig.embedData();
                 String todayDate = LocalDate.now().format(DATE_FMT);
                 String gameName = gameConfig.gameName().toUpperCase();
@@ -153,20 +153,21 @@ public class EmbedFactory {
                                 • %s""".formatted(data.championPrize(), data.killPrize());
 
                 String formatContent = """
-                                __**CUSTOM MATCH**__
+                                __**%s**__
                                 ```text
                                 %s
                                 ```
-                                • **Chi tiết 1:** %s
+                                • **%s:** %s
                                 • **Map:** %s
-                                • **Chi tiết 2:** %s
+                                • **%s:** %s
                                 • **Đăng ký:** %s — Thi đấu: %s
                                 • **Rank:** %s
                                 • **Tuổi:** %s""".formatted(
+                                type.subHeader(),
                                 data.formatDescription(),
-                                data.detail1(),
+                                type.detail1Label(), data.detail1(),
                                 data.map(),
-                                data.detail2(),
+                                type.detail2Label(), data.detail2(),
                                 data.registerDeadline(),
                                 data.matchTime(),
                                 data.rankLimit(),
@@ -180,15 +181,16 @@ public class EmbedFactory {
                                 • Vui lòng đăng ký sớm để giữ slot, số lượng có hạn!"""
                                 .formatted(data.supportChannelId());
 
+                String emoji = type.fieldEmoji();
                 return new EmbedBuilder()
                                 .setTitle(title)
-                                .setColor(EMBED_COLOR)
-                                .addField("🟠 GIẢI THƯỞNG", prizeContent, false)
-                                .addField("🟠 THỂ THỨC", formatContent, false)
-                                .addField("🟠 MỞ ĐĂNG KÝ", registerContent, false)
-                                .addField("🟠 LƯU Ý", noteContent, false)
+                                .setColor(type.embedColor())
+                                .addField(emoji + " GIẢI THƯỞNG", prizeContent, false)
+                                .addField(emoji + " THỂ THỨC", formatContent, false)
+                                .addField(emoji + " MỞ ĐĂNG KÝ", registerContent, false)
+                                .addField(emoji + " LƯU Ý", noteContent, false)
                                 .setThumbnail(data.thumbnailUrl())
-                                .setFooter("DAILY CUSTOM", data.footerIconUrl())
+                                .setFooter(type.footerText(), data.footerIconUrl())
                                 .build();
         }
 }

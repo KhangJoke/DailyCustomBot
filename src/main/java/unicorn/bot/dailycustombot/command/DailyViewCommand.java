@@ -8,8 +8,8 @@ import org.slf4j.LoggerFactory;
 import unicorn.bot.dailycustombot.config.ConfigManager;
 import unicorn.bot.dailycustombot.config.PermissionManager;
 import unicorn.bot.dailycustombot.model.GameConfig;
+import unicorn.bot.dailycustombot.model.GameType;
 
-import java.awt.Color;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,9 +51,11 @@ public class DailyViewCommand {
         }
 
         GameConfig game = optGame.get();
+        GameType type = GameType.fromName(gameName);
+
         EmbedBuilder eb = new EmbedBuilder();
         eb.setTitle("⚙️ Config: " + game.gameName());
-        eb.setColor(Color.decode("#E56A1E"));
+        eb.setColor(type.embedColor());
 
         eb.addField("Channel ID", "`" + game.channelId() + "`", true);
         eb.addField("Role ID to ping", "`" + game.roleId() + "`", true);
@@ -62,20 +64,10 @@ public class DailyViewCommand {
         eb.addField("Post Time", game.postTime().isEmpty() ? "Not set" : "`" + game.postTime() + "`", true);
         eb.addBlankField(true);
 
-        // Label phù hợp theo từng game
-        String normalized = gameName.toLowerCase().trim();
-        String detail1Label;
-        String detail2Label;
-        switch (normalized) {
-            case "valorant", "val" -> { detail1Label = "Súng"; detail2Label = "Agent"; }
-            case "lol", "league of legends", "lmht", "liên minh" -> { detail1Label = "Chế độ"; detail2Label = "Tướng"; }
-            default -> { detail1Label = "Chi tiết 1"; detail2Label = "Chi tiết 2"; }
-        }
-
         StringBuilder embedDetails = new StringBuilder();
         embedDetails.append("**Map:** ").append(game.embedData().map()).append("\n");
-        embedDetails.append("**").append(detail1Label).append(":** ").append(game.embedData().detail1()).append("\n");
-        embedDetails.append("**").append(detail2Label).append(":** ").append(game.embedData().detail2()).append("\n");
+        embedDetails.append("**").append(type.detail1Label()).append(":** ").append(game.embedData().detail1()).append("\n");
+        embedDetails.append("**").append(type.detail2Label()).append(":** ").append(game.embedData().detail2()).append("\n");
         embedDetails.append("**Rank/Age:** ").append(game.embedData().rankLimit()).append(" / ").append(game.embedData().ageLimit()).append("\n");
         embedDetails.append("**Register:** ").append(game.embedData().registerDeadline()).append("\n");
         embedDetails.append("**Match:** ").append(game.embedData().matchTime()).append("\n");
