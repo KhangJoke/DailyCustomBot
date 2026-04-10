@@ -48,7 +48,7 @@ public class DailyAddCommand {
                 roleId,
                 false, // Auto-post off by default
                 "", // No default time
-                configManager.getDefaultEmbedTemplate()
+                configManager.getDefaultEmbedTemplate(gameName)
         );
 
         // Lưu vào config

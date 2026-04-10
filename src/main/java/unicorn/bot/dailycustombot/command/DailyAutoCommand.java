@@ -53,12 +53,18 @@ public class DailyAutoCommand {
         if (timeOption != null) {
             postTime = timeOption.getAsString();
             if (!postTime.matches(TIME_PATTERN)) {
-                event.reply("❌ Invalid time format! Please use `HH:mm` (e.g., 18:00)")
+                event.reply("""
+                        ❌ Sai định dạng giờ! Yêu cầu đúng format `HH:mm` (24 giờ, bắt buộc 2 chữ số).
+                        ✅ Ví dụ đúng: `08:30`, `18:00`, `21:45`
+                        ❌ Ví dụ sai: `8:30`, `6pm`, `18h00`""")
                         .setEphemeral(true).queue();
                 return;
             }
         } else if (autoPost && game.postTime().isEmpty()) {
-            event.reply("❌ You must specify a time when turning ON auto-post! E.g.: `/daily_auto game:Valorant toggle:ON time:18:00`")
+            event.reply("""
+                    ❌ Bạn phải chỉ định giờ khi bật auto-post!
+                    📌 Format: `HH:mm` (24 giờ, bắt buộc 2 chữ số)
+                    ✅ Ví dụ: `/daily_auto game:%s toggle:ON time:18:00`""".formatted(gameName))
                     .setEphemeral(true).queue();
             return;
         }

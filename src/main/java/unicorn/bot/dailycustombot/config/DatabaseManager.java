@@ -112,9 +112,9 @@ public class DatabaseManager {
                     champion_prize      TEXT DEFAULT '',
                     kill_prize          TEXT DEFAULT '',
                     format_description  TEXT DEFAULT '',
-                    gun                 VARCHAR(100) DEFAULT 'All',
+                    detail1             VARCHAR(100) DEFAULT '',
                     map                 VARCHAR(100) DEFAULT '',
-                    agent               VARCHAR(100) DEFAULT '',
+                    detail2             VARCHAR(100) DEFAULT '',
                     register_deadline   VARCHAR(100) DEFAULT '',
                     match_time          VARCHAR(100) DEFAULT '',
                     rank_limit          VARCHAR(100) DEFAULT '',
@@ -125,6 +125,10 @@ public class DatabaseManager {
                     footer_icon_url     TEXT DEFAULT ''
                 );
                 """;
+
+        // Migration: đổi tên column cũ sang generic (safe — IF EXISTS)
+        String migrateGunToDetail1 = "ALTER TABLE game_configs RENAME COLUMN gun TO detail1;";
+        String migrateAgentToDetail2 = "ALTER TABLE game_configs RENAME COLUMN agent TO detail2;";
 
         String createTicketConfig = """
                 CREATE TABLE IF NOT EXISTS ticket_config (
@@ -199,6 +203,23 @@ public class DatabaseManager {
         try (Connection conn = getConnection();
                 Statement stmt = conn.createStatement()) {
             stmt.execute(createGameConfigs);
+
+            // Migration an toàn: chỉ rename nếu column cũ tồn tại
+            try {
+                stmt.execute(migrateGunToDetail1);
+                logger.info("Migrated column 'gun' → 'detail1'.");
+            } catch (SQLException e) {
+                // Column đã được rename hoặc không tồn tại — bỏ qua
+                logger.debug("Column 'gun' migration skipped (already renamed or not found): {}", e.getMessage());
+            }
+            try {
+                stmt.execute(migrateAgentToDetail2);
+                logger.info("Migrated column 'agent' → 'detail2'.");
+            } catch (SQLException e) {
+                // Column đã được rename hoặc không tồn tại — bỏ qua
+                logger.debug("Column 'agent' migration skipped (already renamed or not found): {}", e.getMessage());
+            }
+
             stmt.execute(createTicketConfig);
             stmt.execute(createTicketTypes);
             stmt.execute(insertDefaultTicketConfig);

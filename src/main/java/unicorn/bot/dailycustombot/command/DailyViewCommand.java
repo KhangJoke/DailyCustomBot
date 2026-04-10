@@ -62,10 +62,20 @@ public class DailyViewCommand {
         eb.addField("Post Time", game.postTime().isEmpty() ? "Not set" : "`" + game.postTime() + "`", true);
         eb.addBlankField(true);
 
+        // Label phù hợp theo từng game
+        String normalized = gameName.toLowerCase().trim();
+        String detail1Label;
+        String detail2Label;
+        switch (normalized) {
+            case "valorant", "val" -> { detail1Label = "Súng"; detail2Label = "Agent"; }
+            case "lol", "league of legends", "lmht", "liên minh" -> { detail1Label = "Chế độ"; detail2Label = "Tướng"; }
+            default -> { detail1Label = "Chi tiết 1"; detail2Label = "Chi tiết 2"; }
+        }
+
         StringBuilder embedDetails = new StringBuilder();
         embedDetails.append("**Map:** ").append(game.embedData().map()).append("\n");
-        embedDetails.append("**Gun:** ").append(game.embedData().gun()).append("\n");
-        embedDetails.append("**Agent:** ").append(game.embedData().agent()).append("\n");
+        embedDetails.append("**").append(detail1Label).append(":** ").append(game.embedData().detail1()).append("\n");
+        embedDetails.append("**").append(detail2Label).append(":** ").append(game.embedData().detail2()).append("\n");
         embedDetails.append("**Rank/Age:** ").append(game.embedData().rankLimit()).append(" / ").append(game.embedData().ageLimit()).append("\n");
         embedDetails.append("**Register:** ").append(game.embedData().registerDeadline()).append("\n");
         embedDetails.append("**Match:** ").append(game.embedData().matchTime()).append("\n");

@@ -146,10 +146,12 @@ public class DailyCustomBotApplication {
                                                                                                 .toList()),
                                                                 new OptionData(OptionType.STRING, "map", "Tên bản đồ",
                                                                                 false),
-                                                                new OptionData(OptionType.STRING, "gun", "Yêu cầu súng",
+                                                                new OptionData(OptionType.STRING, "detail1",
+                                                                                "Súng (Valorant) / Chế độ (LoL) / Chi tiết 1",
                                                                                 false),
-                                                                new OptionData(OptionType.STRING, "agent",
-                                                                                "Yêu cầu nhân vật", false),
+                                                                new OptionData(OptionType.STRING, "detail2",
+                                                                                "Agent (Valorant) / Tướng (LoL) / Chi tiết 2",
+                                                                                false),
                                                                 new OptionData(OptionType.STRING, "match_time",
                                                                                 "Giờ thi đấu (VD: 19h15 ngày 21/03)",
                                                                                 false),
@@ -184,7 +186,7 @@ public class DailyCustomBotApplication {
                                                                                 .addChoice("ON", "ON")
                                                                                 .addChoice("OFF", "OFF"),
                                                                 new OptionData(OptionType.STRING, "time",
-                                                                                "Giờ đăng bài (HH:mm, VD: 18:00)",
+                                                                                "Giờ đăng bài 24h, bắt buộc 2 chữ số (VD: 08:30, 18:00, 21:45)",
                                                                                 false)),
 
                                 // /daily_post_now - Đăng ngay

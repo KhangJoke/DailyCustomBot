@@ -49,9 +49,9 @@ public class DailyUpdateCommand {
                 getOptionOrDefault(event, "champion_prize", oldData.championPrize()),
                 getOptionOrDefault(event, "kill_prize", oldData.killPrize()),
                 getOptionOrDefault(event, "format_description", oldData.formatDescription()),
-                getOptionOrDefault(event, "gun", oldData.gun()),
+                getOptionOrDefault(event, "detail1", oldData.detail1()),
                 getOptionOrDefault(event, "map", oldData.map()),
-                getOptionOrDefault(event, "agent", oldData.agent()),
+                getOptionOrDefault(event, "detail2", oldData.detail2()),
                 getOptionOrDefault(event, "register_deadline", oldData.registerDeadline()),
                 getOptionOrDefault(event, "match_time", oldData.matchTime()),
                 getOptionOrDefault(event, "rank_limit", oldData.rankLimit()),
@@ -67,20 +67,30 @@ public class DailyUpdateCommand {
 
         logger.info("Updated config for game: {}", gameName);
 
+        // Hiển thị label phù hợp theo game
+        String normalized = gameName.toLowerCase().trim();
+        String detail1Label;
+        String detail2Label;
+        switch (normalized) {
+            case "valorant", "val" -> { detail1Label = "Súng"; detail2Label = "Agent"; }
+            case "lol", "league of legends", "lmht", "liên minh" -> { detail1Label = "Chế độ"; detail2Label = "Tướng"; }
+            default -> { detail1Label = "Chi tiết 1"; detail2Label = "Chi tiết 2"; }
+        }
+
         String reply = """
                 ✅ Successfully updated config for **%s**!
                 
                 • **Map:** %s
-                • **Gun:** %s
-                • **Agent:** %s
+                • **%s:** %s
+                • **%s:** %s
                 • **Register:** %s
                 • **Match:** %s
                 
                 Use `/daily_post_now %s` to post immediately.""".formatted(
                 gameName,
                 newData.map(),
-                newData.gun(),
-                newData.agent(),
+                detail1Label, newData.detail1(),
+                detail2Label, newData.detail2(),
                 newData.registerDeadline(),
                 newData.matchTime(),
                 gameName

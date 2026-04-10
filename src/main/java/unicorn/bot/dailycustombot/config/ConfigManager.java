@@ -98,7 +98,7 @@ public class ConfigManager {
                 UPDATE game_configs SET
                     channel_id = ?, role_id = ?, auto_post = ?, post_time = ?,
                     champion_prize = ?, kill_prize = ?, format_description = ?,
-                    gun = ?, map = ?, agent = ?,
+                    detail1 = ?, map = ?, detail2 = ?,
                     register_deadline = ?, match_time = ?, rank_limit = ?, age_limit = ?,
                     register_link = ?, support_channel_id = ?, thumbnail_url = ?, footer_icon_url = ?
                 WHERE LOWER(game_name) = LOWER(?)
@@ -114,9 +114,9 @@ public class ConfigManager {
             ps.setString(5, e.championPrize());
             ps.setString(6, e.killPrize());
             ps.setString(7, e.formatDescription());
-            ps.setString(8, e.gun());
+            ps.setString(8, e.detail1());
             ps.setString(9, e.map());
-            ps.setString(10, e.agent());
+            ps.setString(10, e.detail2());
             ps.setString(11, e.registerDeadline());
             ps.setString(12, e.matchTime());
             ps.setString(13, e.rankLimit());
@@ -142,7 +142,7 @@ public class ConfigManager {
                 INSERT INTO game_configs (
                     game_name, channel_id, role_id, auto_post, post_time,
                     champion_prize, kill_prize, format_description,
-                    gun, map, agent,
+                    detail1, map, detail2,
                     register_deadline, match_time, rank_limit, age_limit,
                     register_link, support_channel_id, thumbnail_url, footer_icon_url
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -151,7 +151,7 @@ public class ConfigManager {
                     auto_post = EXCLUDED.auto_post, post_time = EXCLUDED.post_time,
                     champion_prize = EXCLUDED.champion_prize, kill_prize = EXCLUDED.kill_prize,
                     format_description = EXCLUDED.format_description,
-                    gun = EXCLUDED.gun, map = EXCLUDED.map, agent = EXCLUDED.agent,
+                    detail1 = EXCLUDED.detail1, map = EXCLUDED.map, detail2 = EXCLUDED.detail2,
                     register_deadline = EXCLUDED.register_deadline, match_time = EXCLUDED.match_time,
                     rank_limit = EXCLUDED.rank_limit, age_limit = EXCLUDED.age_limit,
                     register_link = EXCLUDED.register_link, support_channel_id = EXCLUDED.support_channel_id,
@@ -169,9 +169,9 @@ public class ConfigManager {
             ps.setString(6, e.championPrize());
             ps.setString(7, e.killPrize());
             ps.setString(8, e.formatDescription());
-            ps.setString(9, e.gun());
+            ps.setString(9, e.detail1());
             ps.setString(10, e.map());
-            ps.setString(11, e.agent());
+            ps.setString(11, e.detail2());
             ps.setString(12, e.registerDeadline());
             ps.setString(13, e.matchTime());
             ps.setString(14, e.rankLimit());
@@ -208,9 +208,26 @@ public class ConfigManager {
     }
 
     /**
-     * Lấy template Embed mặc định để dùng cho game mới.
+     * Lấy template Embed mặc định theo tên game.
+     * Mỗi game có nội dung và label phù hợp riêng.
+     *
+     * @param gameName Tên game (case-insensitive): "Valorant", "LoL", v.v.
+     * @return EmbedData với nội dung mặc định tương ứng
      */
-    public EmbedData getDefaultEmbedTemplate() {
+    public EmbedData getDefaultEmbedTemplate(String gameName) {
+        String normalized = gameName.toLowerCase().trim();
+        return switch (normalized) {
+            case "valorant", "val" -> getValorantDefault();
+            case "lol", "league of legends", "lmht", "liên minh" -> getLoLDefault();
+            default -> getGenericDefault(gameName);
+        };
+    }
+
+    /**
+     * Template mặc định cho Valorant.
+     * detail1 = Súng, detail2 = Agent
+     */
+    private EmbedData getValorantDefault() {
         return new EmbedData(
                 "1 Gói 2895 VP cho `Nhà Vô Địch`",
                 "10 Chamber Coin / mạng hạ gục",
@@ -219,11 +236,60 @@ public class ConfigManager {
                         First to 40 kills
                         Không giới hạn đạn
                         Không giới hạn skill""",
-                "All",
-                "Pearl",
-                "Tuỳ chọn",
+                "All",           // detail1 → Súng
+                "Pearl",         // map
+                "Tuỳ chọn",      // detail2 → Agent
                 "17h ngày 21/03",
                 "19h15 ngày 21/03",
+                "Không giới hạn",
+                "Không giới hạn",
+                "https://forms.gle/example",
+                "000000000000000000",
+                "https://i.imgur.com/example.png",
+                "https://i.imgur.com/example-icon.png"
+        );
+    }
+
+    /**
+     * Template mặc định cho League of Legends.
+     * detail1 = Chế độ, detail2 = Tướng
+     */
+    private EmbedData getLoLDefault() {
+        return new EmbedData(
+                "1 Skin Legacy cho `Nhà Vô Địch`",
+                "500 Blue Essence / mạng hạ gục",
+                """
+                        Custom Game 5v5
+                        Summoner's Rift
+                        Draft Pick""",
+                "Draft Pick",            // detail1 → Chế độ
+                "Summoner's Rift",       // map
+                "Tuỳ chọn",              // detail2 → Tướng
+                "17h ngày 21/03",
+                "19h15 ngày 21/03",
+                "Không giới hạn",
+                "Không giới hạn",
+                "https://forms.gle/example",
+                "000000000000000000",
+                "https://i.imgur.com/example.png",
+                "https://i.imgur.com/example-icon.png"
+        );
+    }
+
+    /**
+     * Template mặc định cho game bất kỳ (generic).
+     * detail1 = Chi tiết 1, detail2 = Chi tiết 2
+     */
+    private EmbedData getGenericDefault(String gameName) {
+        return new EmbedData(
+                "Giải thưởng cho `Nhà Vô Địch`",
+                "Giải thưởng phụ",
+                "Chưa cấu hình — dùng /daily_update để cập nhật",
+                "Chưa cấu hình",     // detail1
+                "Chưa cấu hình",     // map
+                "Chưa cấu hình",     // detail2
+                "Chưa cấu hình",
+                "Chưa cấu hình",
                 "Không giới hạn",
                 "Không giới hạn",
                 "https://forms.gle/example",
@@ -241,9 +307,9 @@ public class ConfigManager {
                 rs.getString("champion_prize"),
                 rs.getString("kill_prize"),
                 rs.getString("format_description"),
-                rs.getString("gun"),
+                rs.getString("detail1"),
                 rs.getString("map"),
-                rs.getString("agent"),
+                rs.getString("detail2"),
                 rs.getString("register_deadline"),
                 rs.getString("match_time"),
                 rs.getString("rank_limit"),
