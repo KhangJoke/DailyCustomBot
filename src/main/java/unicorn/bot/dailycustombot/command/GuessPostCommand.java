@@ -56,7 +56,9 @@ public class GuessPostCommand {
         event.getChannel().sendMessage(videoUrl).queue();
 
         // Gửi Embed thông báo Game và dán Reaction xuống dưới
-        event.getChannel().sendMessageEmbeds(embed.build())
+        // Tag role bên ngoài embed để Discord thông báo cho user
+        String roleMention = "||<@&1492412129888964779>||";
+        event.getChannel().sendMessage(roleMention).setEmbeds(embed.build())
                 .queue(message -> {
                     // Lưu vào DB
                     GuessGameManager.getInstance().createSession(message.getId(), game.toUpperCase(), videoUrl,

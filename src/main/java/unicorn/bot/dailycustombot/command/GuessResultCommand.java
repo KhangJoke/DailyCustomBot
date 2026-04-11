@@ -101,7 +101,13 @@ public class GuessResultCommand {
                         "⏳ **Lưu ý:** Vui lòng tạo Ticket ở <#1490273404735983807> với cú pháp: Tên tài khoản Unicorn + Ngày nhận thưởng (ví dụ: hoangtan123 + 23/5) trong vòng 1 ngày (24h) kể từ kết quả được công bố để được nhận phần thưởng. Trường hợp tạo ticket quá hạn 1 ngày thì phần thưởng sẽ bị hủy.")
                 .setFooter("Cảm ơn tất cả mọi người đã tham gia!");
 
-        // Trả lời công khai
-        event.replyEmbeds(embed.build()).queue();
+        // Tag winners bên ngoài embed (bọc spoiler) để Discord thông báo cho user
+        StringBuilder winnerMentions = new StringBuilder();
+        for (String wId : winners) {
+            winnerMentions.append("||<@").append(wId).append(">|| ");
+        }
+
+        // Trả lời công khai: content chứa mention ẩn + embed kết quả
+        event.reply(winnerMentions.toString().trim()).addEmbeds(embed.build()).queue();
     }
 }
