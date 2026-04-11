@@ -8,7 +8,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -195,5 +197,44 @@ public class GuessGameManager {
             logger.error("Failed to get correct guessers: {}", e.getMessage());
         }
         return list;
+    }
+
+    /**
+     * Lấy loại trò chơi của session.
+     */
+    public Optional<String> getGameType(String messageId) {
+        String sql = "SELECT game_type FROM minigame_sessions WHERE message_id = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, messageId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next())
+                    return Optional.of(rs.getString("game_type"));
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get game type {}: {}", messageId, e.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Đếm số lượt chọn cho từng rank trong một session.
+     * Trả về Map với key là tên rank, value là số lượt chọn (chỉ gồm rank có người chọn).
+     */
+    public Map<String, Integer> getVoteCounts(String messageId) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        String sql = "SELECT guessed_rank, COUNT(*) as cnt FROM minigame_guesses WHERE message_id = ? GROUP BY guessed_rank ORDER BY cnt DESC";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, messageId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    counts.put(rs.getString("guessed_rank"), rs.getInt("cnt"));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get vote counts {}: {}", messageId, e.getMessage());
+        }
+        return counts;
     }
 }

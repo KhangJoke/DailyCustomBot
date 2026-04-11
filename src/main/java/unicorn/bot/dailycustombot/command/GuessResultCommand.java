@@ -5,9 +5,11 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import unicorn.bot.dailycustombot.config.GuessGameManager;
 import unicorn.bot.dailycustombot.config.PermissionManager;
+import unicorn.bot.dailycustombot.listener.GuessAutoCompleteListener;
 
 import java.awt.Color;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
@@ -65,6 +67,21 @@ public class GuessResultCommand {
         var emotes = event.getGuild().getEmojisByName(actualRankEmoji, true);
         String formattedRank = emotes.isEmpty() ? "**" + actualRankEmoji + "**" : emotes.get(0).getAsMention();
 
+        // Thống kê số người chọn cho từng rank (chỉ hiển thị rank có người chọn)
+        Map<String, Integer> voteCounts = gameManager.getVoteCounts(messageId);
+        StringBuilder voteStats = new StringBuilder();
+        if (!voteCounts.isEmpty()) {
+            voteStats.append("\n\n📊 **Thống kê lượt chọn:**\n");
+            for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
+                String rankName = entry.getKey();
+                int count = entry.getValue();
+                // Lấy emoji cho rank
+                var rankEmotes = event.getGuild().getEmojisByName(rankName, true);
+                String rankDisplay = rankEmotes.isEmpty() ? "**" + rankName + "**" : rankEmotes.get(0).getAsMention();
+                voteStats.append(rankDisplay).append(" — ").append(count).append(" người\n");
+            }
+        }
+
         // Đóng game
         gameManager.updateStatus(messageId, "CLOSED");
 
@@ -77,7 +94,8 @@ public class GuessResultCommand {
 
         if (correctGuessers.isEmpty()) {
             String msg = "😔 **MINI GAME KẾT THÚC!**\n" +
-                    "Đáp án đúng là " + formattedRank + " nhưng rất tiếc không có ai đoán đúng lần này!";
+                    "Đáp án đúng là " + formattedRank + " nhưng rất tiếc không có ai đoán đúng lần này!" +
+                    voteStats;
             event.reply(msg).queue();
             return;
         }
@@ -98,7 +116,8 @@ public class GuessResultCommand {
                 .setDescription("Đáp án chính xác là: " + formattedRank + "\n\n" +
                         "Chúc mừng " + winnersListText.toString().trim() + " đã may mắn trúng thưởng!\n\n" +
                         "🎁 **Phần thưởng:** " + finalReward + "\n" +
-                        "⏳ **Lưu ý:** Vui lòng tạo Ticket ở <#1490273404735983807> với cú pháp: Tên tài khoản Unicorn + Ngày nhận thưởng (ví dụ: hoangtan123 + 23/5) trong vòng 1 ngày (24h) kể từ kết quả được công bố để được nhận phần thưởng. Trường hợp tạo ticket quá hạn 1 ngày thì phần thưởng sẽ bị hủy.")
+                        "⏳ **Lưu ý:** Vui lòng tạo Ticket ở <#1490273404735983807> với cú pháp: Tên tài khoản Unicorn + Ngày nhận thưởng (ví dụ: hoangtan123 + 23/5) trong vòng 1 ngày (24h) kể từ kết quả được công bố để được nhận phần thưởng. Trường hợp tạo ticket quá hạn 1 ngày thì phần thưởng sẽ bị hủy." +
+                        voteStats)
                 .setFooter("Cảm ơn tất cả mọi người đã tham gia!");
 
         // Tag winners bên ngoài embed (bọc spoiler) để Discord thông báo cho user
