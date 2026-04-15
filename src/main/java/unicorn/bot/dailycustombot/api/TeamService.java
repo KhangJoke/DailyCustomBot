@@ -114,12 +114,33 @@ public class TeamService {
         // 2. XÓA SẠCH NHỮNG AI KHÔNG CÒN TRONG ĐỘI
         for (String id : oldMemberIds) {
             if (!currentMemberIds.contains(id)) {
+                // 2.1 Xóa Role (Dùng Snowflake để lột role không cần Cache)
                 UserSnowflake user = UserSnowflake.fromId(id);
                 guild.removeRoleFromMember(user, roleTuyenThu).queue();
                 guild.removeRoleFromMember(user, roleDoiTruong).queue();
-                textChannel.getManager().removePermissionOverride(Long.parseLong(id)).queue();
-                if (voiceChannel != null)
-                    voiceChannel.getManager().removePermissionOverride(Long.parseLong(id)).queue();
+
+                // 2.2 Ép xóa quyền Room (Dùng retrieveMemberById để né hoàn toàn lỗi Cache)
+                guild.retrieveMemberById(id).queue(
+                        memberToRemove -> {
+                            // Nếu bắt được người -> Ép quyền DENY (Cấm cửa 100%)
+                            textChannel.upsertPermissionOverride(memberToRemove)
+                                    .clear(Permission.VIEW_CHANNEL)
+                                    .setDenied(EnumSet.of(Permission.VIEW_CHANNEL)).queue();
+
+                            if (voiceChannel != null) {
+                                voiceChannel.upsertPermissionOverride(memberToRemove)
+                                        .clear(Permission.VIEW_CHANNEL)
+                                        .setDenied(EnumSet.of(Permission.VIEW_CHANNEL)).queue();
+                            }
+                        },
+                        error -> {
+                            // Nếu user đã out server (Discord trả lỗi) -> Dọn dẹp override rác bằng ID
+                            // thuần
+                            textChannel.getManager().removePermissionOverride(Long.parseLong(id)).queue();
+                            if (voiceChannel != null) {
+                                voiceChannel.getManager().removePermissionOverride(Long.parseLong(id)).queue();
+                            }
+                        });
             }
         }
 
