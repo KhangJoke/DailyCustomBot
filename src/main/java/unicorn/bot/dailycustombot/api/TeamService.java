@@ -249,27 +249,40 @@ public class TeamService {
 
         VoiceChannel existingVoiceChannel = findVoiceChannelByName(guild, voiceChannelName);
 
-        // ─── Xử lý members bị XÓA (Dùng UserSnowflake để lột Role 100%) ───
+        // ─── Xử lý members bị XÓA ───
         for (String removedId : toRemoveIds) {
             net.dv8tion.jda.api.entities.UserSnowflake snowflake = net.dv8tion.jda.api.entities.UserSnowflake
                     .fromId(removedId);
 
-            // Lột role Tuyển Thủ và Đội Trưởng
+            // 1. Lột role Tuyển Thủ và Đội Trưởng
             guild.removeRoleFromMember(snowflake, roleTuyenThu).queue(
                     s -> logger.info("Revoked Tuyển Thủ from ID {}", removedId),
                     e -> logger.error("Failed to revoke Tuyển Thủ: {}", e.getMessage()));
 
             guild.removeRoleFromMember(snowflake, roleDoiTruong).queue();
 
-            // Sút khỏi phòng Text và Voice (Dùng ép kiểu long để bypass Cache)
-            long memberIdLong = Long.parseLong(removedId);
-            existingTextChannel.getManager().removePermissionOverride(memberIdLong).queue(
-                    s -> logger.info("Removed channel permissions for ID {}", removedId),
-                    e -> logger.error("Failed to remove channel permissions for ID {}", removedId));
+            // 2. Tước quyền vào Room Text & Voice triệt để (Dùng retrieveMember để né
+            // Cache)
+            guild.retrieveMemberById(removedId).queue(
+                    member -> {
+                        // Ép quyền DENY (Cấm nhìn thấy/kết nối vào kênh)
+                        existingTextChannel.upsertPermissionOverride(member)
+                                .clear(Permission.VIEW_CHANNEL)
+                                .setDenied(EnumSet.of(Permission.VIEW_CHANNEL))
+                                .queue();
 
-            if (existingVoiceChannel != null) {
-                existingVoiceChannel.getManager().removePermissionOverride(memberIdLong).queue();
-            }
+                        if (existingVoiceChannel != null) {
+                            existingVoiceChannel.upsertPermissionOverride(member)
+                                    .clear(Permission.VIEW_CHANNEL)
+                                    .setDenied(EnumSet.of(Permission.VIEW_CHANNEL))
+                                    .queue();
+                        }
+                        logger.info("Đã cấm triệt để user {} khỏi room team.", member.getUser().getName());
+                    },
+                    error -> {
+                        // Nếu nó không tồn tại (đã dỗi out server) thì kệ nó, Discord tự xóa quyền
+                        logger.warn("User ID {} không còn trong server, tự động mất quyền.", removedId);
+                    });
         }
 
         // ─── Xử lý members được THÊM MỚI ───
