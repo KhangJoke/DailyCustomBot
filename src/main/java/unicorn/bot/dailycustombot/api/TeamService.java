@@ -102,12 +102,15 @@ public class TeamService {
         List<String> notFound = new ArrayList<>();
 
         for (String username : request.membersDiscord()) {
-            if (username == null || username.isBlank()) continue;
+            if (username == null || username.isBlank())
+                continue;
             String cleanName = username.trim();
-            if (cleanName.isEmpty()) continue;
+            if (cleanName.isEmpty())
+                continue;
 
             // Bỏ qua nếu trùng captain
-            if (cleanName.equalsIgnoreCase(request.captainDiscord().trim())) continue;
+            if (cleanName.equalsIgnoreCase(request.captainDiscord().trim()))
+                continue;
 
             Member member = findMemberByUsername(guild, cleanName);
             if (member == null) {
@@ -387,7 +390,8 @@ public class TeamService {
      * Hỗ trợ: username thuần (kheng.joke), @username, hoặc tên hiển thị.
      */
     private Member findMemberByUsername(Guild guild, String username) {
-        if (username == null || username.isBlank()) return null;
+        if (username == null || username.isBlank())
+            return null;
 
         String cleanName = username.trim();
         if (cleanName.startsWith("@")) {
@@ -396,17 +400,20 @@ public class TeamService {
 
         // Tìm bằng username (new Discord username system — kheng.joke)
         List<Member> found = guild.getMembersByName(cleanName, true);
-        if (!found.isEmpty()) return found.get(0);
+        if (!found.isEmpty())
+            return found.get(0);
 
         // Tìm bằng effective name (nickname/display name)
         found = guild.getMembersByEffectiveName(cleanName, true);
-        if (!found.isEmpty()) return found.get(0);
+        if (!found.isEmpty())
+            return found.get(0);
 
         // Tìm bằng tag cũ (nếu có #)
         if (cleanName.contains("#")) {
             String nameOnly = cleanName.split("#")[0];
             found = guild.getMembersByName(nameOnly, true);
-            if (!found.isEmpty()) return found.get(0);
+            if (!found.isEmpty())
+                return found.get(0);
         }
 
         return null;
