@@ -20,6 +20,7 @@ import unicorn.bot.dailycustombot.listener.TicketSelectMenuListener;
 import unicorn.bot.dailycustombot.listener.GuessReactionListener;
 import unicorn.bot.dailycustombot.listener.GuessAutoCompleteListener;
 import unicorn.bot.dailycustombot.scheduler.DailyScheduler;
+import unicorn.bot.dailycustombot.api.ApiServer;
 import unicorn.bot.dailycustombot.config.PermissionManager;
 
 import java.io.IOException;
@@ -75,7 +76,7 @@ public class DailyCustomBotApplication {
                 try {
                         // Build JDA instance
                         JDA jda = JDABuilder.createDefault(token)
-                                        .enableIntents(GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT)
+                                        .enableIntents(GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MEMBERS)
                                         .addEventListeners(
                                                         new SlashCommandListener(),
                                                         new TicketButtonListener(),
@@ -89,6 +90,14 @@ public class DailyCustomBotApplication {
                         jda.awaitReady();
                         logger.info("Bot connected to Discord! User: {}", jda.getSelfUser().getAsTag());
 
+                        // Load member cache để API có thể tìm member bằng username
+                        if (!jda.getGuilds().isEmpty()) {
+                                var guild = jda.getGuilds().get(0);
+                                guild.loadMembers().get();
+                                logger.info("Loaded {} members from guild '{}'.",
+                                                guild.getMemberCount(), guild.getName());
+                        }
+
                         // Đăng ký Slash Commands
                         registerSlashCommands(jda);
 
@@ -97,9 +106,14 @@ public class DailyCustomBotApplication {
                         scheduler.start();
                         logger.info("DailyScheduler started.");
 
+                        // Khởi động API Server (Javalin)
+                        ApiServer apiServer = new ApiServer(jda);
+                        apiServer.start();
+
                         // Shutdown hook
                         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                                 logger.info("Shutting down bot...");
+                                apiServer.stop();
                                 scheduler.shutdown();
                                 jda.shutdown();
                                 DatabaseManager.getInstance().shutdown();
@@ -327,7 +341,22 @@ public class DailyCustomBotApplication {
 
                                 // /perm_view - Xem danh sách quyền
                                 Commands.slash("perm_view", "Xem bảng phân quyền hiện tại trong server")
-                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)))
+                                                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)),
+
+                                // ===== UNICORN CHAMPIONSHIP =====
+
+                                // /confirm-team - Xác nhận đội thi đấu
+                                Commands.slash("confirm-team", "Xác nhận và thiết lập đội thi đấu UNICORN CHAMPIONSHIP")
+                                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR))
+                                        .addOptions(
+                                                new OptionData(OptionType.STRING, "team_name",
+                                                        "Tên đầy đủ của đội", true),
+                                                new OptionData(OptionType.STRING, "short_name",
+                                                        "Tên viết tắt (dùng cho tên kênh)", true),
+                                                new OptionData(OptionType.USER, "captain",
+                                                        "Đội trưởng của đội", true),
+                                                new OptionData(OptionType.STRING, "members",
+                                                        "Danh sách thành viên (mention hoặc username, cách nhau bằng dấu cách/phẩy)", true)))
                                 .queue(
                                                 commands -> logger.info("Registered {} slash commands successfully!",
                                                                 commands.size()),
