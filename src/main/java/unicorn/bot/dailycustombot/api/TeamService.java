@@ -387,33 +387,41 @@ public class TeamService {
 
     /**
      * Tìm member bằng Discord username (case-insensitive).
-     * Hỗ trợ: username thuần (kheng.joke), @username, hoặc tên hiển thị.
+     * Sửa lỗi Cache: Nếu không có trong cache thì gọi API Discord để fetch.
      */
     private Member findMemberByUsername(Guild guild, String username) {
         if (username == null || username.isBlank())
             return null;
 
-        String cleanName = username.trim();
+        String cleanName = username.trim().toLowerCase(); // Tên chuẩn mới của Discord luôn là chữ thường
         if (cleanName.startsWith("@")) {
             cleanName = cleanName.substring(1);
         }
 
-        // Tìm bằng username (new Discord username system — kheng.joke)
-        List<Member> found = guild.getMembersByName(cleanName, true);
-        if (!found.isEmpty())
-            return found.get(0);
+        // 1. Tìm trong Cache trước (nhanh, tốn ít tài nguyên)
+        List<Member> cached = guild.getMembersByName(cleanName, true);
+        if (!cached.isEmpty())
+            return cached.get(0);
 
-        // Tìm bằng effective name (nickname/display name)
-        found = guild.getMembersByEffectiveName(cleanName, true);
-        if (!found.isEmpty())
-            return found.get(0);
+        cached = guild.getMembersByEffectiveName(cleanName, true);
+        if (!cached.isEmpty())
+            return cached.get(0);
 
-        // Tìm bằng tag cũ (nếu có #)
-        if (cleanName.contains("#")) {
-            String nameOnly = cleanName.split("#")[0];
-            found = guild.getMembersByName(nameOnly, true);
-            if (!found.isEmpty())
-                return found.get(0);
+        // 2. Cache không có -> Ép Bot gọi API thẳng lên server Discord
+        try {
+            // retrieveMembersByPrefix trả về RestAction, dùng .complete() để block đợi kết
+            // quả
+            List<Member> fetched = guild.retrieveMembersByPrefix(cleanName, 10).get();
+
+            for (Member m : fetched) {
+                // Check lại cho chắc ăn vì prefix có thể trả về kheng.joke1, kheng.joke2...
+                if (m.getUser().getName().equalsIgnoreCase(cleanName) ||
+                        m.getEffectiveName().equalsIgnoreCase(cleanName)) {
+                    return m;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Lỗi khi fetch member từ Discord API '{}': {}", cleanName, e.getMessage());
         }
 
         return null;
