@@ -222,105 +222,94 @@ public class TeamService {
 
         logger.info("UPDATE team '{}' ({}).", request.teamName(), request.shortName());
 
-        // Lấy danh sách member cũ từ permission overrides
-        Set<Member> oldMembers = new HashSet<>();
-        existingTextChannel.getMemberPermissionOverrides().forEach(override -> {
-            Member m = override.getMember();
-            if (m != null && !m.getUser().isBot()) {
-                oldMembers.add(m);
+        // 1. Lấy danh sách ID của member cũ từ permission overrides (Bypass Cache)
+        Set<String> oldMemberIds = new HashSet<>();
+        existingTextChannel.getPermissionOverrides().forEach(override -> {
+            if (override.isMemberOverride()) {
+                // Bỏ qua bot (ví dụ bot của quán)
+                Member cached = override.getMember();
+                if (cached != null && cached.getUser().isBot())
+                    return;
+                oldMemberIds.add(override.getId());
             }
         });
 
-        Set<Member> newMemberSet = new HashSet<>(newMembers);
+        // 2. Danh sách ID của đội hình mới
+        Set<String> newMemberIds = newMembers.stream()
+                .map(Member::getId)
+                .collect(Collectors.toSet());
 
-        // Diff: members cần xóa vs members cần thêm
-        Set<Member> toRemove = new HashSet<>(oldMembers);
-        toRemove.removeAll(newMemberSet);
+        // Diff: ID cần xóa vs Member cần thêm
+        Set<String> toRemoveIds = new HashSet<>(oldMemberIds);
+        toRemoveIds.removeAll(newMemberIds);
 
-        Set<Member> toAdd = new HashSet<>(newMemberSet);
-        toAdd.removeAll(oldMembers);
+        Set<Member> toAdd = newMembers.stream()
+                .filter(m -> !oldMemberIds.contains(m.getId()))
+                .collect(Collectors.toSet());
 
-        // ─── Xử lý members bị XÓA ───
-        for (Member removed : toRemove) {
-            logger.info("Removing member '{}' from team '{}'.", removed.getUser().getName(), request.teamName());
+        VoiceChannel existingVoiceChannel = findVoiceChannelByName(guild, voiceChannelName);
 
-            // Thu hồi roles
-            guild.removeRoleFromMember(removed, roleTuyenThu).queue(
-                    s -> logger.info("Revoked Tuyển Thủ from {}", removed.getUser().getName()),
-                    e -> logger.error("Failed to revoke Tuyển Thủ from {}: {}",
-                            removed.getUser().getName(), e.getMessage()));
+        // ─── Xử lý members bị XÓA (Dùng UserSnowflake để lột Role 100%) ───
+        for (String removedId : toRemoveIds) {
+            net.dv8tion.jda.api.entities.UserSnowflake snowflake = net.dv8tion.jda.api.entities.UserSnowflake
+                    .fromId(removedId);
 
-            guild.removeRoleFromMember(removed, roleDoiTruong).queue(
-                    s -> logger.info("Revoked Đội Trưởng from {}", removed.getUser().getName()),
-                    e -> logger.error("Failed to revoke Đội Trưởng from {}: {}",
-                            removed.getUser().getName(), e.getMessage()));
+            // Lột role Tuyển Thủ và Đội Trưởng
+            guild.removeRoleFromMember(snowflake, roleTuyenThu).queue(
+                    s -> logger.info("Revoked Tuyển Thủ from ID {}", removedId),
+                    e -> logger.error("Failed to revoke Tuyển Thủ: {}", e.getMessage()));
 
-            // Xóa permission override khỏi text channel
-            existingTextChannel.upsertPermissionOverride(removed)
-                    .clear(Permission.VIEW_CHANNEL)
-                    .setDenied(EnumSet.of(Permission.VIEW_CHANNEL))
-                    .queue();
+            guild.removeRoleFromMember(snowflake, roleDoiTruong).queue();
+
+            // Sút khỏi phòng Text và Voice (Dùng ép kiểu long để bypass Cache)
+            long memberIdLong = Long.parseLong(removedId);
+            existingTextChannel.getManager().removePermissionOverride(memberIdLong).queue(
+                    s -> logger.info("Removed channel permissions for ID {}", removedId),
+                    e -> logger.error("Failed to remove channel permissions for ID {}", removedId));
+
+            if (existingVoiceChannel != null) {
+                existingVoiceChannel.getManager().removePermissionOverride(memberIdLong).queue();
+            }
         }
 
-        // ─── Xử lý members được THÊM ───
+        // ─── Xử lý members được THÊM MỚI ───
         for (Member added : toAdd) {
-            logger.info("Adding member '{}' to team '{}'.", added.getUser().getName(), request.teamName());
+            // Cấp role Tuyển Thủ
+            guild.addRoleToMember(added, roleTuyenThu).queue();
 
-            // Gán role Tuyển Thủ
-            guild.addRoleToMember(added, roleTuyenThu).queue(
-                    s -> logger.info("Assigned Tuyển Thủ to {}", added.getUser().getName()),
-                    e -> logger.error("Failed to assign Tuyển Thủ to {}: {}",
-                            added.getUser().getName(), e.getMessage()));
-
-            // Thêm permission vào text channel
+            // Cấp quyền vào phòng Text và Voice
             existingTextChannel.upsertPermissionOverride(added)
                     .setAllowed(EnumSet.of(Permission.VIEW_CHANNEL))
                     .queue();
-        }
 
-        // ─── Cập nhật captain ───
-        // Thu hồi role Đội Trưởng từ tất cả members cũ (trừ captain mới)
-        for (Member oldMember : oldMembers) {
-            if (!oldMember.equals(newCaptain) && oldMember.getRoles().contains(roleDoiTruong)) {
-                guild.removeRoleFromMember(oldMember, roleDoiTruong).queue(
-                        s -> logger.info("Revoked Đội Trưởng from old captain {}", oldMember.getUser().getName()),
-                        e -> logger.error("Failed to revoke Đội Trưởng: {}", e.getMessage()));
-            }
-        }
-        // Gán role Đội Trưởng cho captain mới
-        guild.addRoleToMember(newCaptain, roleDoiTruong).queue(
-                s -> logger.info("Assigned Đội Trưởng to new captain {}", newCaptain.getUser().getName()),
-                e -> logger.error("Failed to assign Đội Trưởng: {}", e.getMessage()));
-
-        // Gán role Tuyển Thủ cho captain mới (nếu chưa có)
-        guild.addRoleToMember(newCaptain, roleTuyenThu).queue();
-
-        // ─── Cập nhật voice channel permissions ───
-        VoiceChannel existingVoiceChannel = findVoiceChannelByName(guild, voiceChannelName);
-        if (existingVoiceChannel != null) {
-            // Xóa members cũ
-            for (Member removed : toRemove) {
-                existingVoiceChannel.upsertPermissionOverride(removed)
-                        .clear(Permission.VIEW_CHANNEL)
-                        .setDenied(EnumSet.of(Permission.VIEW_CHANNEL))
-                        .queue();
-            }
-            // Thêm members mới
-            for (Member added : toAdd) {
+            if (existingVoiceChannel != null) {
                 existingVoiceChannel.upsertPermissionOverride(added)
                         .setAllowed(EnumSet.of(Permission.VIEW_CHANNEL))
                         .queue();
             }
         }
 
-        // ─── Gửi thông báo cập nhật ───
+        // ─── Cập nhật Đội Trưởng ───
+        // Lột role Đội Trưởng của TẤT CẢ member cũ (trừ ông Captain mới)
+        for (String oldId : oldMemberIds) {
+            if (!oldId.equals(newCaptain.getId())) {
+                guild.removeRoleFromMember(net.dv8tion.jda.api.entities.UserSnowflake.fromId(oldId), roleDoiTruong)
+                        .queue();
+            }
+        }
+        // Gán role cho Đội trưởng mới
+        guild.addRoleToMember(newCaptain, roleDoiTruong).queue();
+        guild.addRoleToMember(newCaptain, roleTuyenThu).queue();
+
+        // ─── Gửi thông báo cập nhật vào Box Chat ───
         StringBuilder updateMsg = new StringBuilder();
         updateMsg.append("🔄 **ĐỘI ĐÃ ĐƯỢC CẬP NHẬT BỞI ADMIN**\n\n");
 
-        if (!toRemove.isEmpty()) {
-            updateMsg.append("❌ **Thành viên bị xóa:** ");
-            updateMsg.append(toRemove.stream()
-                    .map(m -> m.getUser().getName())
+        if (!toRemoveIds.isEmpty()) {
+            updateMsg.append("❌ **Thành viên bị kick/rời team:** ");
+            // Dùng cú pháp <@ID> để Discord tự động hiển thị tên người đó
+            updateMsg.append(toRemoveIds.stream()
+                    .map(id -> "<@" + id + ">")
                     .collect(Collectors.joining(", ")));
             updateMsg.append("\n");
         }
@@ -335,7 +324,6 @@ public class TeamService {
 
         updateMsg.append("\n👑 **Đội trưởng:** ").append(newCaptain.getAsMention());
 
-        // Tag toàn bộ đội hình mới sau khi cập nhật
         String currentMembersMentions = newMembers.stream()
                 .map(Member::getAsMention)
                 .collect(Collectors.joining(", "));
@@ -344,12 +332,11 @@ public class TeamService {
 
         existingTextChannel.sendMessage(updateMsg.toString()).queue();
 
-        String summary = String.format("Team '%s' đã được cập nhật. Xóa %d, thêm %d thành viên.",
-                request.teamName(), toRemove.size(), toAdd.size());
+        String summary = String.format("Team '%s' đã cập nhật: Xóa %d, Thêm %d thành viên.",
+                request.teamName(), toRemoveIds.size(), toAdd.size());
 
         return ConfirmTeamResponse.updated(summary);
     }
-
     // ════════════════════════════════════════════════════════════════
     // HELPER METHODS
     // ════════════════════════════════════════════════════════════════
