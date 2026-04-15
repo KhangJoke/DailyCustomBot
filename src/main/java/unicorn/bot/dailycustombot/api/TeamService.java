@@ -127,8 +127,8 @@ public class TeamService {
         }
 
         // ─── Kiểm tra channel đã tồn tại → CREATE vs UPDATE ───
-        String textChannelName = "💬-chat-" + request.shortName();
-        String voiceChannelName = "🔊-onlan-" + request.shortName();
+        String textChannelName = "chat-" + request.shortName();
+        String voiceChannelName = "voice -" + request.shortName();
 
         TextChannel existingTextChannel = findTextChannelByName(guild, textChannelName);
 
@@ -173,7 +173,7 @@ public class TeamService {
             }
 
             // Gửi welcome message
-            sendWelcomeMessage(textChannel, request.teamName(), captain);
+            sendWelcomeMessage(textChannel, request.teamName(), captain, members);
 
             logger.info("Created text channel '{}' for team '{}'.", textChannelName, request.teamName());
         } catch (Exception e) {
@@ -334,7 +334,13 @@ public class TeamService {
         }
 
         updateMsg.append("\n👑 **Đội trưởng:** ").append(newCaptain.getAsMention());
-        updateMsg.append("\n👥 **Tổng thành viên:** ").append(newMembers.size());
+
+        // Tag toàn bộ đội hình mới sau khi cập nhật
+        String currentMembersMentions = newMembers.stream()
+                .map(Member::getAsMention)
+                .collect(Collectors.joining(", "));
+        updateMsg.append("\n👥 **Đội hình hiện tại (").append(newMembers.size()).append(" người):** ")
+                .append(currentMembersMentions);
 
         existingTextChannel.sendMessage(updateMsg.toString()).queue();
 
@@ -369,16 +375,22 @@ public class TeamService {
     /**
      * Gửi tin nhắn chào mừng vào kênh text mới.
      */
-    private void sendWelcomeMessage(TextChannel channel, String teamName, Member captain) {
+    private void sendWelcomeMessage(TextChannel channel, String teamName, Member captain, List<Member> members) {
+        // Tạo chuỗi tag tất cả thành viên
+        String memberMentions = members.stream()
+                .map(Member::getAsMention)
+                .collect(Collectors.joining(" "));
+
         String welcomeMsg = String.format(
                 "🔥 **CHÀO MỪNG TEAM %s ĐÃ ĐẾN VỚI UNICORN CHAMPIONSHIP!** 🔥\n\n"
+                        + "Xin chào các tuyển thủ: %s\n"
                         + "Đội của bạn đã được duyệt thành công. Đội trưởng %s hãy đại diện team qua channel <#%s> "
                         + "để thực hiện các bước cuối cùng:\n"
                         + "1️⃣ Tag đầy đủ Discord 5-6 thành viên.\n"
                         + "2️⃣ Ghi rõ Tên Đội.\n"
                         + "3️⃣ Gửi ảnh Team/Logo Team để Admin check lần cuối.\n\n"
                         + "Chúc anh em có những trận đấu sấy rát tay tại Unicorn! 🚀",
-                teamName, captain.getAsMention(), ID_CHANNEL_CHECKIN);
+                teamName, memberMentions, captain.getAsMention(), ID_CHANNEL_CHECKIN);
 
         channel.sendMessage(welcomeMsg).queue(
                 s -> logger.info("Welcome message sent to channel {}", channel.getName()),
