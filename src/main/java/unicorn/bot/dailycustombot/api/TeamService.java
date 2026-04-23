@@ -1,5 +1,6 @@
 package unicorn.bot.dailycustombot.api;
 
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -11,8 +12,12 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import unicorn.bot.dailycustombot.config.EnvLoader;
 
+import java.awt.*;
+import java.time.Instant;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class TeamService {
@@ -38,6 +43,11 @@ public class TeamService {
         if (guild == null)
             return ConfirmTeamResponse.error("Bot chưa vào server!");
 
+        // ─── NEW — Thông báo đơn đăng ký mới (không cần Role/Category) ───
+        if ("NEW".equalsIgnoreCase(request.action())) {
+            return handleNew(guild, request);
+        }
+
         Role roleTuyenThu = guild.getRoleById(ID_ROLE_TUYEN_THU);
         Role roleDoiTruong = guild.getRoleById(ID_ROLE_DOI_TRUONG);
         Role roleAdmin = guild.getRoleById(ID_ROLE_ADMIN);
@@ -59,12 +69,14 @@ public class TeamService {
 
         Set<Member> finalMembers = new LinkedHashSet<>();
         finalMembers.add(captainMember);
-        for (String username : request.membersDiscord()) {
-            if (username == null || username.isBlank())
-                continue;
-            Member m = findMemberByUsername(guild, username.trim());
-            if (m != null)
-                finalMembers.add(m);
+        if (request.membersDiscord() != null) {
+            for (String username : request.membersDiscord()) {
+                if (username == null || username.isBlank())
+                    continue;
+                Member m = findMemberByUsername(guild, username.trim());
+                if (m != null)
+                    finalMembers.add(m);
+            }
         }
 
         List<Member> memberList = new ArrayList<>(finalMembers);
@@ -79,6 +91,65 @@ public class TeamService {
         } else {
             return handleCreate(guild, teamCategory, request, memberList, captainMember, roleTuyenThu, roleDoiTruong,
                     roleAdmin, textName, voiceName);
+        }
+    }
+
+    // ==========================================
+    // NEW — Thông báo đơn đăng ký mới cho Admin
+    // ==========================================
+    private ConfirmTeamResponse handleNew(Guild guild, ConfirmTeamRequest request) {
+        try {
+            // Đọc channel ID thông báo admin từ env var, fallback dùng channel check-in
+            String adminChannelId = EnvLoader.get("ADMIN_NOTIFY_CHANNEL_ID");
+            if (adminChannelId == null || adminChannelId.isBlank()) {
+                adminChannelId = ID_CHANNEL_CHECKIN;
+                logger.warn("ADMIN_NOTIFY_CHANNEL_ID chưa cấu hình, dùng channel check-in mặc định.");
+            }
+
+            TextChannel adminChannel = guild.getTextChannelById(adminChannelId);
+            if (adminChannel == null) {
+                return ConfirmTeamResponse.error("Không tìm thấy channel thông báo admin (ID: " + adminChannelId + ")");
+            }
+
+            // Tạo link trực tiếp đến sheet
+            String sheetLink = request.sheetUrl() != null && !request.sheetUrl().isBlank()
+                    ? request.sheetUrl()
+                    : "Không có link";
+
+            String sheetName = request.sheetName() != null && !request.sheetName().isBlank()
+                    ? request.sheetName()
+                    : "Sheet";
+
+            String teamName = request.teamName() != null ? request.teamName() : "Chưa rõ";
+            String captain = request.captainDiscord() != null ? request.captainDiscord() : "Chưa rõ";
+
+            // Tạo Embed đẹp thông báo cho admin
+            EmbedBuilder embed = new EmbedBuilder()
+                    .setTitle("📋 ĐƠN ĐĂNG KÝ MỚI!")
+                    .setColor(new Color(52, 152, 219)) // Xanh dương
+                    .addField("🏷️ Tên đội", teamName, true)
+                    .addField("👑 Đội trưởng", captain, true)
+                    .addField("📄 Sheet", sheetName, true)
+                    .addField("📍 Dòng", String.valueOf(request.rowNumber()), true)
+                    .addField("🔗 Link Sheet", "[👉 Mở Google Sheet](" + sheetLink + ")", false)
+                    .setFooter("Vui lòng vào Sheet → chuyển Status thành \"Confirm\" để duyệt đội.")
+                    .setTimestamp(Instant.now());
+
+            // Tag role Admin để thông báo
+            Role roleAdmin = guild.getRoleById(ID_ROLE_ADMIN);
+            String mentionText = roleAdmin != null
+                    ? roleAdmin.getAsMention() + " — Có đội mới đăng ký, cần duyệt!"
+                    : "⚠️ Có đội mới đăng ký, cần duyệt!";
+
+            adminChannel.sendMessage(mentionText)
+                    .setEmbeds(embed.build())
+                    .queue();
+
+            logger.info("Đã gửi thông báo đăng ký mới: team='{}', row={}", teamName, request.rowNumber());
+            return ConfirmTeamResponse.notified("Đã thông báo cho Admin về đội " + teamName);
+        } catch (Exception e) {
+            logger.error("Lỗi khi gửi thông báo NEW: {}", e.getMessage(), e);
+            return ConfirmTeamResponse.error("Lỗi gửi thông báo: " + e.getMessage());
         }
     }
 
