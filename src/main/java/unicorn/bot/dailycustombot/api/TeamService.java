@@ -43,9 +43,10 @@ public class TeamService {
         if (guild == null)
             return ConfirmTeamResponse.error("Bot chưa vào server!");
 
-        // ─── NEW — Thông báo đơn đăng ký mới (không cần Role/Category) ───
-        if ("NEW".equalsIgnoreCase(request.action())) {
-            return handleNew(guild, request);
+        // ─── NEW / EDIT — Thông báo cho Admin ───
+        if ("NEW".equalsIgnoreCase(request.action()) || "EDIT".equalsIgnoreCase(request.action())) {
+            boolean isEdit = "EDIT".equalsIgnoreCase(request.action());
+            return handleNotify(guild, request, isEdit);
         }
 
         Role roleTuyenThu = guild.getRoleById(ID_ROLE_TUYEN_THU);
@@ -95,9 +96,9 @@ public class TeamService {
     }
 
     // ==========================================
-    // NEW — Thông báo đơn đăng ký mới cho Admin
+    // NEW / EDIT — Thông báo đăng ký mới hoặc chỉnh sửa form cho Admin
     // ==========================================
-    private ConfirmTeamResponse handleNew(Guild guild, ConfirmTeamRequest request) {
+    private ConfirmTeamResponse handleNotify(Guild guild, ConfirmTeamRequest request, boolean isEdit) {
         try {
             // Đọc channel ID thông báo admin từ env var, fallback dùng channel check-in
             String adminChannelId = EnvLoader.get("ADMIN_NOTIFY_CHANNEL_ID");
@@ -123,32 +124,48 @@ public class TeamService {
             String teamName = request.teamName() != null ? request.teamName() : "Chưa rõ";
             String captain = request.captainDiscord() != null ? request.captainDiscord() : "Chưa rõ";
 
-            // Tạo Embed đẹp thông báo cho admin
+            // Tạo Embed — phân biệt NEW vs EDIT
+            String title = isEdit ? "✏️ ĐỘI CHỈNH SỬA THÔNG TIN!" : "📋 ĐƠN ĐĂNG KÝ MỚI!";
+            Color embedColor = isEdit ? new Color(230, 126, 34) : new Color(52, 152, 219); // Cam cho EDIT, Xanh cho NEW
+
             EmbedBuilder embed = new EmbedBuilder()
-                    .setTitle("📋 ĐƠN ĐĂNG KÝ MỚI!")
-                    .setColor(new Color(52, 152, 219)) // Xanh dương
+                    .setTitle(title)
+                    .setColor(embedColor)
                     .addField("🏷️ Tên đội", teamName, true)
                     .addField("👑 Đội trưởng", captain, true)
                     .addField("📄 Sheet", sheetName, true)
                     .addField("📍 Dòng", String.valueOf(request.rowNumber()), true)
                     .addField("🔗 Link Sheet", "[👉 Mở Google Sheet](" + sheetLink + ")", false)
-                    .setFooter("Vui lòng vào Sheet → chuyển Status thành \"Confirm\" để duyệt đội.")
                     .setTimestamp(Instant.now());
+
+            if (isEdit) {
+                embed.setFooter("Đội đã chỉnh sửa form. Kiểm tra lại thông tin trên Sheet.");
+            } else {
+                embed.setFooter("Vui lòng vào Sheet → chuyển Status thành \"Confirm\" để duyệt đội.");
+            }
 
             // Tag role Admin để thông báo
             Role roleAdmin = guild.getRoleById(ID_ROLE_ADMIN);
-            String mentionText = roleAdmin != null
-                    ? roleAdmin.getAsMention() + " — Có đội mới đăng ký, cần duyệt!"
-                    : "⚠️ Có đội mới đăng ký, cần duyệt!";
+            String mentionText;
+            if (isEdit) {
+                mentionText = roleAdmin != null
+                        ? roleAdmin.getAsMention() + " — Đội **" + teamName + "** vừa chỉnh sửa thông tin đăng ký!"
+                        : "⚠️ Đội **" + teamName + "** vừa chỉnh sửa thông tin đăng ký!";
+            } else {
+                mentionText = roleAdmin != null
+                        ? roleAdmin.getAsMention() + " — Có đội mới đăng ký, cần duyệt!"
+                        : "⚠️ Có đội mới đăng ký, cần duyệt!";
+            }
 
             adminChannel.sendMessage(mentionText)
                     .setEmbeds(embed.build())
                     .queue();
 
-            logger.info("Đã gửi thông báo đăng ký mới: team='{}', row={}", teamName, request.rowNumber());
+            String logAction = isEdit ? "chỉnh sửa" : "đăng ký mới";
+            logger.info("Đã gửi thông báo {}: team='{}', row={}", logAction, teamName, request.rowNumber());
             return ConfirmTeamResponse.notified("Đã thông báo cho Admin về đội " + teamName);
         } catch (Exception e) {
-            logger.error("Lỗi khi gửi thông báo NEW: {}", e.getMessage(), e);
+            logger.error("Lỗi khi gửi thông báo: {}", e.getMessage(), e);
             return ConfirmTeamResponse.error("Lỗi gửi thông báo: " + e.getMessage());
         }
     }
