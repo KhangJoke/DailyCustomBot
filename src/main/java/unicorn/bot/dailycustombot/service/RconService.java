@@ -16,9 +16,11 @@ import java.nio.charset.StandardCharsets;
  *
  * Sử dụng pure Java Socket — không cần thư viện bên ngoài.
  * Triển khai giao thức Source RCON (dùng chung cho Minecraft):
- * - Packet format: [Length 4B LE] [RequestID 4B LE] [Type 4B LE] [Payload null-terminated] [Padding 1B null]
+ * - Packet format: [Length 4B LE] [RequestID 4B LE] [Type 4B LE] [Payload
+ * null-terminated] [Padding 1B null]
  * - Type 3 = Login (SERVERDATA_AUTH)
- * - Type 2 = Command (SERVERDATA_EXECCOMMAND) / Auth Response (SERVERDATA_AUTH_RESPONSE)
+ * - Type 2 = Command (SERVERDATA_EXECCOMMAND) / Auth Response
+ * (SERVERDATA_AUTH_RESPONSE)
  *
  * Cấu hình qua biến môi trường: RCON_IP, RCON_PORT, RCON_PASS.
  */
@@ -41,7 +43,7 @@ public class RconService {
      * @throws RconException Khi không thể kết nối, xác thực thất bại, hoặc lỗi I/O
      */
     public String addWhitelist(String minecraftUsername) throws RconException {
-        String command = "whitelist add " + minecraftUsername;
+        String command = "easywhitelist add " + minecraftUsername;
         return sendCommand(command);
     }
 
@@ -53,7 +55,7 @@ public class RconService {
      * @throws RconException Khi không thể kết nối, xác thực thất bại, hoặc lỗi I/O
      */
     public String removeWhitelist(String minecraftUsername) throws RconException {
-        String command = "whitelist remove " + minecraftUsername;
+        String command = "easywhitelist remove " + minecraftUsername;
         return sendCommand(command);
     }
 
@@ -130,17 +132,18 @@ public class RconService {
      */
     private void sendPacket(DataOutputStream out, int requestId, int type, String payload) throws IOException {
         byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
-        // Kích thước packet = RequestID(4) + Type(4) + Payload(n) + NullTerminator(1) + Padding(1)
+        // Kích thước packet = RequestID(4) + Type(4) + Payload(n) + NullTerminator(1) +
+        // Padding(1)
         int packetSize = 4 + 4 + payloadBytes.length + 1 + 1;
 
         ByteBuffer buffer = ByteBuffer.allocate(4 + packetSize);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
-        buffer.putInt(packetSize);     // Kích thước payload (không bao gồm chính nó)
-        buffer.putInt(requestId);      // ID để ghép cặp request-response
-        buffer.putInt(type);           // Loại packet (AUTH hoặc EXECCOMMAND)
-        buffer.put(payloadBytes);      // Nội dung lệnh / mật khẩu
-        buffer.put((byte) 0);         // Null terminator cho payload
-        buffer.put((byte) 0);         // Padding byte theo spec
+        buffer.putInt(packetSize); // Kích thước payload (không bao gồm chính nó)
+        buffer.putInt(requestId); // ID để ghép cặp request-response
+        buffer.putInt(type); // Loại packet (AUTH hoặc EXECCOMMAND)
+        buffer.put(payloadBytes); // Nội dung lệnh / mật khẩu
+        buffer.put((byte) 0); // Null terminator cho payload
+        buffer.put((byte) 0); // Padding byte theo spec
 
         out.write(buffer.array());
         out.flush();
