@@ -4,6 +4,7 @@ import io.javalin.Javalin;
 import net.dv8tion.jda.api.JDA;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import unicorn.bot.dailycustombot.config.EnvLoader;
 
 /**
  * HTTP Server sử dụng Javalin.
@@ -82,7 +83,7 @@ public class ApiServer {
      * Lấy PORT từ env var (Railway tự inject), fallback 8080.
      */
     private int getPort() {
-        String portStr = System.getenv("PORT");
+        String portStr = EnvLoader.get("PORT");
         if (portStr != null && !portStr.isBlank()) {
             try {
                 return Integer.parseInt(portStr);
@@ -94,36 +95,14 @@ public class ApiServer {
     }
 
     /**
-     * Đọc API key từ env var hoặc .env file.
+     * Đọc API key — EnvLoader đã xử lý ưu tiên .env → System.getenv().
      */
     private String loadApiKey() {
-        // Thử environment variable trước
-        String key = System.getenv("API_SECRET_KEY");
+        String key = EnvLoader.get("API_SECRET_KEY");
         if (key != null && !key.isBlank()) {
-            logger.info("API_SECRET_KEY loaded from environment variable.");
+            logger.info("API_SECRET_KEY loaded.");
             return key;
         }
-
-        // Thử đọc từ .env
-        try {
-            java.nio.file.Path envFile = java.nio.file.Path.of(".env");
-            if (java.nio.file.Files.exists(envFile)) {
-                for (String line : java.nio.file.Files.readAllLines(envFile)) {
-                    line = line.trim();
-                    if (line.startsWith("#") || line.isBlank()) continue;
-                    if (line.startsWith("API_SECRET_KEY=")) {
-                        String value = line.substring("API_SECRET_KEY=".length()).trim();
-                        if (!value.isBlank()) {
-                            logger.info("API_SECRET_KEY loaded from .env file.");
-                            return value;
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            logger.warn("Failed to read .env for API_SECRET_KEY: {}", e.getMessage());
-        }
-
         logger.warn("API_SECRET_KEY not configured! API endpoints are unprotected.");
         return null;
     }

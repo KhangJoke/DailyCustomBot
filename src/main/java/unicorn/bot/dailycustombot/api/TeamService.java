@@ -30,6 +30,9 @@ public class TeamService {
         this.jda = jda;
     }
 
+    // ==========================================
+    // ENTRY POINT — Phân loại action từ Sheet
+    // ==========================================
     public ConfirmTeamResponse confirmTeam(ConfirmTeamRequest request) {
         Guild guild = jda.getGuilds().isEmpty() ? null : jda.getGuilds().get(0);
         if (guild == null)
@@ -44,6 +47,12 @@ public class TeamService {
             return ConfirmTeamResponse.error("Lỗi ID Role/Category!");
         }
 
+        // ─── CANCEL ───
+        if ("CANCEL".equalsIgnoreCase(request.action())) {
+            return handleCancel(guild, request, roleTuyenThu, roleDoiTruong);
+        }
+
+        // ─── CONFIRM (CREATE hoặc UPDATE) ───
         Member captainMember = findMemberByUsername(guild, request.captainDiscord());
         if (captainMember == null)
             return ConfirmTeamResponse.error("Không tìm thấy Captain: " + request.captainDiscord());
@@ -73,6 +82,9 @@ public class TeamService {
         }
     }
 
+    // ==========================================
+    // CREATE — Tạo mới đội (Role + Channel)
+    // ==========================================
     private ConfirmTeamResponse handleCreate(Guild guild, Category category, ConfirmTeamRequest request,
             List<Member> members, Member captain, Role roleTuyenThu, Role roleDoiTruong, Role roleAdmin,
             String textName, String voiceName) {
@@ -100,6 +112,9 @@ public class TeamService {
         }
     }
 
+    // ==========================================
+    // UPDATE — Cập nhật đội hình (sync Role + quyền channel)
+    // ==========================================
     private ConfirmTeamResponse handleUpdate(Guild guild, TextChannel textChannel, ConfirmTeamRequest request,
             List<Member> newMembers, Member captain, Role roleTuyenThu, Role roleDoiTruong, Role roleAdmin,
             String voiceName) {
@@ -169,6 +184,61 @@ public class TeamService {
         textChannel.sendMessage(sb.toString()).queue();
         return ConfirmTeamResponse.updated("Cập nhật " + request.teamName());
     }
+
+    // ==========================================
+    // CANCEL — Hủy đội (xóa Role + xóa Channel)
+    // ==========================================
+    private ConfirmTeamResponse handleCancel(Guild guild, ConfirmTeamRequest request,
+            Role roleTuyenThu, Role roleDoiTruong) {
+        try {
+            String textName = "chat-" + request.shortName().toLowerCase().replace(" ", "-");
+            String voiceName = "voice-" + request.shortName().toLowerCase().replace(" ", "-");
+
+            TextChannel textChannel = findTextChannelByName(guild, textName);
+            VoiceChannel voiceChannel = findVoiceChannelByName(guild, voiceName);
+
+            if (textChannel == null && voiceChannel == null) {
+                return ConfirmTeamResponse.cancelled("Đội " + request.teamName() + " chưa có channel, không cần hủy.");
+            }
+
+            // 1. LỘT ROLE CỦA TẤT CẢ THÀNH VIÊN ĐANG CÓ TRONG CHANNEL
+            if (textChannel != null) {
+                Set<String> memberIds = textChannel.getPermissionOverrides().stream()
+                        .filter(ov -> ov.isMemberOverride())
+                        .map(ov -> ov.getId())
+                        .collect(Collectors.toSet());
+
+                for (String id : memberIds) {
+                    UserSnowflake user = UserSnowflake.fromId(id);
+                    guild.removeRoleFromMember(user, roleTuyenThu).queue();
+                    guild.removeRoleFromMember(user, roleDoiTruong).queue();
+                }
+
+                // 2. GỬI THÔNG BÁO TRƯỚC KHI XÓA
+                textChannel.sendMessage("⚠️ **ĐỘI " + request.teamName().toUpperCase()
+                        + " ĐÃ BỊ HỦY!** Channel sẽ bị xóa trong giây lát...").complete();
+
+                // 3. XÓA TEXT CHANNEL
+                textChannel.delete().reason("Hủy đội " + request.teamName()).queue();
+                logger.info("Đã xóa text channel: {}", textName);
+            }
+
+            // 4. XÓA VOICE CHANNEL
+            if (voiceChannel != null) {
+                voiceChannel.delete().reason("Hủy đội " + request.teamName()).queue();
+                logger.info("Đã xóa voice channel: {}", voiceName);
+            }
+
+            return ConfirmTeamResponse.cancelled("Đã hủy đội " + request.teamName() + " — xóa Role & Channel.");
+        } catch (Exception e) {
+            logger.error("Lỗi khi hủy đội {}: {}", request.teamName(), e.getMessage(), e);
+            return ConfirmTeamResponse.error("Lỗi khi hủy: " + e.getMessage());
+        }
+    }
+
+    // ==========================================
+    // HELPER METHODS
+    // ==========================================
 
     private void sendWelcomeMessage(TextChannel channel, String teamName, Member captain, List<Member> members) {
         String mentions = members.stream().map(Member::getAsMention).collect(Collectors.joining(" "));

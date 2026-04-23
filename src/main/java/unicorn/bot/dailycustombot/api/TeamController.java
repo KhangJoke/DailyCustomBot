@@ -28,8 +28,8 @@ public class TeamController {
         try {
             ConfirmTeamRequest request = ctx.bodyAsClass(ConfirmTeamRequest.class);
 
-            logger.info("API confirm-team: team='{}', short='{}', captain='{}', members={}, row={}",
-                    request.teamName(), request.shortName(), request.captainDiscord(),
+            logger.info("API confirm-team: action='{}', team='{}', short='{}', captain='{}', members={}, row={}",
+                    request.action(), request.teamName(), request.shortName(), request.captainDiscord(),
                     request.membersDiscord(), request.rowNumber());
 
             ConfirmTeamResponse response = teamService.confirmTeam(request);

@@ -200,6 +200,15 @@ public class DatabaseManager {
                 );
                 """;
 
+        String createSmpRegistrations = """
+                CREATE TABLE IF NOT EXISTS smp_registrations (
+                    discord_user_id VARCHAR(20) PRIMARY KEY,
+                    taikhoan_net    VARCHAR(100) NOT NULL,
+                    ten_ingame      VARCHAR(50) NOT NULL,
+                    registered_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """;
+
         try (Connection conn = getConnection();
                 Statement stmt = conn.createStatement()) {
             stmt.execute(createGameConfigs);
@@ -229,6 +238,7 @@ public class DatabaseManager {
             stmt.execute(alterMinigameReward);
             stmt.execute(createMinigameGuesses);
             stmt.execute(createRolePermissions);
+            stmt.execute(createSmpRegistrations);
             logger.info("Database tables initialized successfully.");
         } catch (SQLException e) {
             logger.error("Failed to initialize database tables: {}", e.getMessage(), e);
@@ -237,61 +247,9 @@ public class DatabaseManager {
     }
 
     /**
-     * Load DATABASE_URL từ .env hoặc environment variable.
+     * Load DATABASE_URL — EnvLoader đã xử lý ưu tiên .env → System.getenv().
      */
     public static String loadDatabaseUrl() {
-        // Thử tìm từ .env
-        Path[] searchPaths = {
-                Path.of(".env"),
-                Path.of(System.getProperty("user.dir"), ".env"),
-                getJarDirectory().resolve(".env"),
-                getJarParentDirectory().resolve(".env")
-        };
-
-        for (Path envFile : searchPaths) {
-            if (Files.exists(envFile)) {
-                try {
-                    List<String> lines = Files.readAllLines(envFile);
-                    for (String line : lines) {
-                        line = line.trim();
-                        if (line.startsWith("#") || line.isBlank())
-                            continue;
-                        if (line.startsWith("DATABASE_URL=")) {
-                            String url = line.substring("DATABASE_URL=".length()).trim();
-                            if (!url.isBlank()) {
-                                logger.info("DATABASE_URL loaded from .env file: {}", envFile.toAbsolutePath());
-                                return url;
-                            }
-                        }
-                    }
-                } catch (IOException e) {
-                    logger.warn("Cannot read .env at {}: {}", envFile.toAbsolutePath(), e.getMessage());
-                }
-            }
-        }
-
-        // Fallback: environment variable
-        String envUrl = System.getenv("DATABASE_URL");
-        if (envUrl != null && !envUrl.isBlank()) {
-            logger.info("DATABASE_URL loaded from environment variable.");
-            return envUrl;
-        }
-
-        return null;
-    }
-
-    private static Path getJarDirectory() {
-        try {
-            Path jarPath = Path.of(DatabaseManager.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI());
-            return jarPath.getParent() != null ? jarPath.getParent() : Path.of(".");
-        } catch (Exception e) {
-            return Path.of(".");
-        }
-    }
-
-    private static Path getJarParentDirectory() {
-        Path jarDir = getJarDirectory();
-        return jarDir.getParent() != null ? jarDir.getParent() : Path.of(".");
+        return EnvLoader.get("DATABASE_URL");
     }
 }

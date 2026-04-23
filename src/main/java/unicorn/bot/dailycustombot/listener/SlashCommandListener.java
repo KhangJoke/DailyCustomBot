@@ -19,6 +19,9 @@ import unicorn.bot.dailycustombot.command.PermAddCommand;
 import unicorn.bot.dailycustombot.command.PermRemoveCommand;
 import unicorn.bot.dailycustombot.command.PermViewCommand;
 import unicorn.bot.dailycustombot.command.ConfirmTeamCommand;
+import unicorn.bot.dailycustombot.command.RegisterCommand;
+import unicorn.bot.dailycustombot.command.EditIGNCommand;
+import unicorn.bot.dailycustombot.command.UnregisterCommand;
 
 /**
  * Listener nhận mọi Slash Command interaction và route đến handler tương ứng.
@@ -42,6 +45,9 @@ public class SlashCommandListener extends ListenerAdapter {
     private final PermRemoveCommand permRemoveCommand = new PermRemoveCommand();
     private final PermViewCommand permViewCommand = new PermViewCommand();
     private final ConfirmTeamCommand confirmTeamCommand = new ConfirmTeamCommand();
+    private final RegisterCommand registerCommand = new RegisterCommand();
+    private final EditIGNCommand editIGNCommand = new EditIGNCommand();
+    private final UnregisterCommand unregisterCommand = new UnregisterCommand();
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
@@ -67,6 +73,9 @@ public class SlashCommandListener extends ListenerAdapter {
             case "perm_remove" -> permRemoveCommand.handle(event);
             case "perm_view" -> permViewCommand.handle(event);
             case "confirm-team" -> confirmTeamCommand.handle(event);
+            case "dangky" -> registerCommand.handle(event);
+            case "suaten" -> editIGNCommand.handle(event);
+            case "huydangky" -> unregisterCommand.handle(event);
             default -> {
                 logger.warn("Unknown command: /{}", commandName);
                 event.reply("Unknown command!").setEphemeral(true).queue();
