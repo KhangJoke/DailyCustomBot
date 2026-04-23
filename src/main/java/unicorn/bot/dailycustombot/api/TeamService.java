@@ -26,7 +26,7 @@ public class TeamService {
     private static final String ID_ROLE_TUYEN_THU = "1493680420498444449";
     private static final String ID_ROLE_DOI_TRUONG = "1493680761142907022";
     private static final String ID_ROLE_ADMIN = "1477129745543204935";
-    private static final String ID_CHANNEL_CHECKIN = "1493684466311364690";
+    private static final String ID_CHANNEL_CHECKIN = "1493672233464234146";
     private static final String ID_CATEGORY_TEAMS = "1461604155687702743";
 
     private final JDA jda;
