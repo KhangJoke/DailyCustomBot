@@ -44,6 +44,16 @@ public class RegisterCommand {
             return;
         }
 
+        // Validate: tên in-game phải viết thường hoàn toàn
+        if (!tenIngame.equals(tenIngame.toLowerCase())) {
+            event.getHook().editOriginal(
+                    "❌ Tên nhân vật phải được nhập bằng **chữ thường (lowercase)** hoàn toàn!\n"
+                            + "⚠️ **Lưu ý:** Server yêu cầu tên Minecraft phải viết thường để whitelist hoạt động chính xác.\n"
+                            + "📝 Ví dụ: `" + tenIngame.toLowerCase() + "` thay vì `" + tenIngame + "`"
+            ).queue();
+            return;
+        }
+
         // Kiểm tra user đã đăng ký chưa
         String existingIngame = registrationService.findIngameByUserId(event.getUser().getId());
         if (existingIngame != null) {

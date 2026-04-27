@@ -237,4 +237,44 @@ public class GuessGameManager {
         }
         return counts;
     }
+    /**
+     * Lưu danh sách người trúng thưởng vào bảng minigame_winners.
+     */
+    public void saveWinners(List<String> winnerUserIds, String messageId) {
+        String sql = "INSERT INTO minigame_winners (user_id, message_id) VALUES (?, ?) ON CONFLICT (user_id, message_id) DO NOTHING";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (String userId : winnerUserIds) {
+                ps.setString(1, userId);
+                ps.setString(2, messageId);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+            logger.info("Saved {} winners for session {}", winnerUserIds.size(), messageId);
+        } catch (SQLException e) {
+            logger.error("Failed to save winners for session {}: {}", messageId, e.getMessage());
+        }
+    }
+
+    /**
+     * Lấy danh sách user_id đã trúng thưởng trong N ngày gần đây.
+     * Dùng để lọc cooldown — người đã trúng sẽ không được trúng lại.
+     *
+     * @param days Số ngày cooldown (mặc định 14)
+     * @return Set chứa user_id đang trong cooldown
+     */
+    public java.util.Set<String> getRecentWinnerIds(int days) {
+        java.util.Set<String> set = new java.util.HashSet<>();
+        String sql = "SELECT DISTINCT user_id FROM minigame_winners WHERE won_at >= NOW() - INTERVAL '" + days + " days'";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                set.add(rs.getString("user_id"));
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to get recent winners: {}", e.getMessage());
+        }
+        return set;
+    }
 }

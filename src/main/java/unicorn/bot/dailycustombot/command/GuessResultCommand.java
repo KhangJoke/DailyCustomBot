@@ -100,10 +100,24 @@ public class GuessResultCommand {
             return;
         }
 
-        // Chọn ngẫu nhiên N người
-        java.util.Collections.shuffle(correctGuessers, random);
-        int actualWinners = Math.min(winnerCount, correctGuessers.size());
-        List<String> winners = correctGuessers.subList(0, actualWinners);
+        // Lọc cooldown ngầm: loại bỏ người đã trúng trong 14 ngày gần đây
+        java.util.Set<String> recentWinners = gameManager.getRecentWinnerIds(14);
+        List<String> eligible = correctGuessers.stream()
+                .filter(uid -> !recentWinners.contains(uid))
+                .collect(java.util.stream.Collectors.toList());
+
+        // Nếu tất cả người đoán đúng đều đang cooldown → vẫn cho trúng bình thường
+        if (eligible.isEmpty()) {
+            eligible = new java.util.ArrayList<>(correctGuessers);
+        }
+
+        // Chọn ngẫu nhiên N người từ danh sách eligible
+        java.util.Collections.shuffle(eligible, random);
+        int actualWinners = Math.min(winnerCount, eligible.size());
+        List<String> winners = eligible.subList(0, actualWinners);
+
+        // Lưu winners vào DB để tracking cooldown
+        gameManager.saveWinners(winners, messageId);
 
         StringBuilder winnersListText = new StringBuilder();
         for (String wId : winners) {

@@ -43,7 +43,7 @@ public class RconService {
      * @throws RconException Khi không thể kết nối, xác thực thất bại, hoặc lỗi I/O
      */
     public String addWhitelist(String minecraftUsername) throws RconException {
-        String command = "easywhitelist add " + minecraftUsername;
+        String command = "swl add " + minecraftUsername;
         return sendCommand(command);
     }
 
@@ -55,7 +55,7 @@ public class RconService {
      * @throws RconException Khi không thể kết nối, xác thực thất bại, hoặc lỗi I/O
      */
     public String removeWhitelist(String minecraftUsername) throws RconException {
-        String command = "easywhitelist remove " + minecraftUsername;
+        String command = "swl remove " + minecraftUsername;
         return sendCommand(command);
     }
 

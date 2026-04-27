@@ -200,6 +200,15 @@ public class DatabaseManager {
                 );
                 """;
 
+        String createMinigameWinners = """
+                CREATE TABLE IF NOT EXISTS minigame_winners (
+                    user_id    VARCHAR(50) NOT NULL,
+                    message_id VARCHAR(50) NOT NULL,
+                    won_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (user_id, message_id)
+                );
+                """;
+
         String createSmpRegistrations = """
                 CREATE TABLE IF NOT EXISTS smp_registrations (
                     discord_user_id VARCHAR(20) PRIMARY KEY,
@@ -237,6 +246,7 @@ public class DatabaseManager {
             stmt.execute(alterMinigameSessions);
             stmt.execute(alterMinigameReward);
             stmt.execute(createMinigameGuesses);
+            stmt.execute(createMinigameWinners);
             stmt.execute(createRolePermissions);
             stmt.execute(createSmpRegistrations);
             logger.info("Database tables initialized successfully.");
